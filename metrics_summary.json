@@ -1,0 +1,78 @@
+{
+  "dataset": {
+    "name": "Pothole Detection Dataset (Kaggle)",
+    "license": "Could not be verified; assumed CC0/public domain",
+    "raw_total": 712,
+    "duplicates_removed": 6,
+    "final_total": 706,
+    "pothole": 362,
+    "normal": 344
+  },
+  "split": {
+    "train": 494,
+    "val": 106,
+    "test": 106
+  },
+  "class_weights": {
+    "0": 1.0248962655601659,
+    "1": 0.9762845849802372
+  },
+  "pos_weight": 0.9525691866874695,
+  "model_params": {
+    "model_a": 126529,
+    "model_b": 716865
+  },
+  "threshold": 0.30999999999999994,
+  "val_f1_at_threshold": 0.9369369369369369,
+  "majority_baseline_acc": 0.5094339622641509,
+  "model_a_test": {
+    "accuracy": 0.9150943396226415,
+    "precision": 0.8813559322033898,
+    "recall": 0.9629629629629629,
+    "f1": 0.9203539823008849,
+    "roc_auc": 0.959045584045584,
+    "f1_ci_lo": 0.8571428571428571,
+    "f1_ci_hi": 0.9655318527177089,
+    "confusion_matrix": [
+      [
+        45,
+        7
+      ],
+      [
+        2,
+        52
+      ]
+    ]
+  },
+  "model_b_test": {
+    "accuracy": 0.9150943396226415,
+    "precision": 0.9245283018867925,
+    "recall": 0.9074074074074074,
+    "f1": 0.9158878504672897,
+    "roc_auc": 0.9668803418803418,
+    "f1_ci_lo": 0.8495575221238938,
+    "f1_ci_hi": 0.9663014981273409,
+    "confusion_matrix": [
+      [
+        48,
+        4
+      ],
+      [
+        5,
+        49
+      ]
+    ]
+  },
+  "training_history": {
+    "model_a_epochs": 30,
+    "model_b_epochs": 23,
+    "model_a_best_val_loss": 0.190425038970304,
+    "model_b_best_val_loss": 0.17835561832729377
+  },
+  "error_analysis": {
+    "TP": 49,
+    "FP": 4,
+    "FN": 5,
+    "TN": 48
+  }
+}
