@@ -264,12 +264,17 @@ async def get_plot(plot_name: str):
     return JSONResponse({"error": "Plot not found"}, status_code=404)
 
 @app.get("/api/video-analysis")
-async def get_video_analysis():
-    cache_path = BASE_DIR / "video_analysis_cache.json"
-    if cache_path.exists():
-        with open(cache_path) as f:
+async def get_video_analysis(clip: str = "sample_test_short.mp4"):
+    if "user" in clip.lower():
+        p = BASE_DIR / "user_video_analysis.json"
+    else:
+        p = BASE_DIR / "sample_test_analysis.json"
+    if not p.exists():
+        p = BASE_DIR / "video_analysis_cache.json"
+    if p.exists():
+        with open(p) as f:
             return JSONResponse(json.load(f))
-    return JSONResponse({"error": "Cache not generated"}, status_code=404)
+    return JSONResponse({"error": "Analysis not found"}, status_code=404)
 
 @app.post("/api/analyze-video")
 async def analyze_video(
