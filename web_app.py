@@ -276,6 +276,14 @@ async def get_video_analysis(clip: str = "sample_test_short.mp4"):
             return JSONResponse(json.load(f))
     return JSONResponse({"error": "Analysis not found"}, status_code=404)
 
+@app.get("/api/uploaded-video/{filename}")
+async def get_uploaded_video(filename: str):
+    temp_dir = BASE_DIR / "temp_uploads"
+    target = temp_dir / filename
+    if target.exists():
+        return FileResponse(str(target), media_type="video/mp4")
+    return JSONResponse({"error": "Video not found"}, status_code=404)
+
 @app.post("/api/analyze-video")
 async def analyze_video(
     file: Optional[UploadFile] = File(None),
@@ -283,32 +291,40 @@ async def analyze_video(
     threshold: float = Form(DEFAULT_THRESHOLD),
     kalman_q: float = Form(0.01),
     kalman_r: float = Form(0.10),
-    max_frames: int = Form(120),
+    max_frames: int = Form(180),
     frame_stride: int = Form(1)
 ):
     t0 = time.time()
-    temp_path = None
+    video_url = None
     if file and file.filename:
         temp_dir = BASE_DIR / "temp_uploads"
         temp_dir.mkdir(exist_ok=True)
-        temp_path = temp_dir / file.filename
+        # Unique safe filename
+        safe_name = f"upload_{int(time.time())}_{file.filename}"
+        temp_path = temp_dir / safe_name
         contents = await file.read()
         with open(temp_path, "wb") as f:
             f.write(contents)
         video_src = str(temp_path)
+        video_url = f"/api/uploaded-video/{safe_name}"
     else:
         video_src = str(BASE_DIR / clip_name)
+        video_url = f"/api/plot/{clip_name}"
 
     cap = cv2.VideoCapture(video_src)
     if not cap.isOpened():
         return JSONResponse({"error": f"Cannot open video: {video_src}"}, status_code=400)
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    total_in_file = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    limit = min(total_in_file, max_frames) if total_in_file > 0 else max_frames
 
     kf = KalmanFilter1D(Q=kalman_q, R=kalman_r)
     frames_data = []
     idx = 0
     pothole_count = 0
     
-    while cap.isOpened() and len(frames_data) < max_frames:
+    while cap.isOpened() and len(frames_data) < limit:
         ret, frame = cap.read()
         if not ret:
             break
@@ -322,29 +338,39 @@ async def analyze_video(
             is_pot = bool(smooth_p >= threshold)
             if is_pot:
                 pothole_count += 1
+
+            cam = compute_gradcam(model, tensor, model.last_conv, IMG_SIZE)
+            x1, y1, x2, y2, area = extract_bbox(cam, IMG_SIZE)
+
             frames_data.append({
                 "frame": idx + 1,
+                "time": round(idx / fps, 2),
                 "raw": round(raw_p, 4),
                 "smoothed": round(smooth_p, 4),
-                "is_pothole": is_pot
+                "is_pothole": is_pot,
+                "bbox": {
+                    "x1": round(x1 / IMG_SIZE, 3),
+                    "y1": round(y1 / IMG_SIZE, 3),
+                    "x2": round(x2 / IMG_SIZE, 3),
+                    "y2": round(y2 / IMG_SIZE, 3),
+                    "area_px": area
+                }
             })
         idx += 1
     cap.release()
-    if temp_path and temp_path.exists():
-        try: temp_path.unlink()
-        except: pass
 
     elapsed = time.time() - t0
-    fps = round(len(frames_data) / max(elapsed, 0.001), 1)
+    proc_fps = round(len(frames_data) / max(elapsed, 0.001), 1)
 
     return JSONResponse({
         "status": "success",
+        "video_url": video_url,
         "threshold": round(threshold, 2),
         "total_frames": len(frames_data),
         "pothole_frames": pothole_count,
         "pothole_pct": round(100.0 * pothole_count / max(len(frames_data), 1), 1),
         "elapsed_sec": round(elapsed, 2),
-        "fps": fps,
+        "fps": proc_fps,
         "frames": frames_data
     })
 

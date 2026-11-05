@@ -800,27 +800,23 @@
         </button>
       </div>
 
-      <!-- Video Selector Cards -->
-      <div class="video-selector-grid">
-        <div class="video-btn-card selected" id="vcard-user" onclick="loadClip('user_test_video.mp4', 'user')">
-          <div class="tag-lbl">⭐ USER FOOTAGE</div>
-          <div class="name">Your Uploaded Video</div>
-          <div class="desc">512 frames · High Res Roadway</div>
+      <!-- Video Upload Dropzone -->
+      <div class="drop-box" id="videoDropBox" ondragover="onVideoDrag(event)" ondragleave="offVideoDrag()" ondrop="onVideoDrop(event)" style="margin-bottom:14px;">
+        <input type="file" id="videoUploadInput" accept="video/mp4,video/*" onchange="handleVideoUpload(event)" />
+        <div class="icon">🎬</div>
+        <p>Drop your road video here (MP4) to screen for potholes, or <span onclick="document.getElementById('videoUploadInput').click()">browse file</span></p>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-top:5px;">AI will screen the entire video, detect potholes, and highlight them with live glowing bounding boxes.</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.78rem; color:#94a3b8;">Or test with preloaded footage:</span>
+          <button class="btn btn-ghost" style="padding:5px 12px; font-size:0.75rem;" onclick="loadPreloadedVideo('user_test_video.mp4')">📱 WhatsApp Road Footage (512 frames)</button>
+          <button class="btn btn-ghost" style="padding:5px 12px; font-size:0.75rem;" onclick="loadPreloadedVideo('sample_test_short.mp4')">⚡ Benchmark Test Sequence</button>
         </div>
-        <div class="video-btn-card" id="vcard-clip1" onclick="loadClip('sample_test_short.mp4', 'clip1')">
-          <div class="tag-lbl">⚡ TEST BENCHMARK</div>
-          <div class="name">Quick Test Clip</div>
-          <div class="desc">120 frames · Pothole Sequence</div>
-        </div>
-        <div class="video-btn-card" id="vcard-annotated" onclick="loadClip('sample_short_annotated.mp4', 'annotated')">
-          <div class="tag-lbl">🔥 PRE-RENDERED AI</div>
-          <div class="name">Annotated AI Feed</div>
-          <div class="desc">Hardcoded CAM + Bounding Box</div>
-        </div>
-        <div class="video-btn-card" id="vcard-dashcam" onclick="loadClip('sample_road_video.mp4', 'dashcam')">
-          <div class="tag-lbl">📹 FULL DASHCAM</div>
-          <div class="name">Long Roadway Feed</div>
-          <div class="desc">692 frames · 27.7s Drive</div>
+        <div id="videoProcessingStatus" class="hidden" style="font-size:0.78rem; color:var(--accent-cyan); font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:6px;">
+          <div class="spinner" style="display:block; width:12px; height:12px; border-width:2px;"></div>
+          <span>Screening video stream…</span>
         </div>
       </div>
 
@@ -846,13 +842,12 @@
       <!-- Action Buttons Row -->
       <div class="btn-row" style="margin-bottom:18px;">
         <button class="btn btn-primary" id="analyzeVideoBtn" onclick="runVideoAnalysis()">
-          <span id="vBtnText">▶ Run Full Video Screening & Temporal Analysis</span>
+          <span id="vBtnText">▶ Re-run Screening & Temporal Analysis</span>
           <div class="spinner" id="vSpinner"></div>
         </button>
         <button class="btn btn-ghost" onclick="document.getElementById('videoUploadInput').click()">
-          ⬆️ Upload Another MP4
+          ⬆️ Upload Another Road Video
         </button>
-        <input type="file" id="videoUploadInput" accept="video/mp4,video/*" style="display:none" onchange="handleVideoUpload(event)" />
         <span style="font-size:0.75rem; color:#94a3b8;">1-D Kalman Filter ($Q=0.01, R=0.10$) eliminates frame flicker.</span>
       </div>
 
@@ -1159,28 +1154,87 @@ function toggleHighlighting() {
   }
 }
 
-function loadClip(filename, cardKey) {
+function loadPreloadedVideo(filename) {
   currentClipFile = filename;
-  currentClipKey  = cardKey;
-
-  document.querySelectorAll('.video-btn-card').forEach(c => c.classList.remove('selected'));
-  const card = document.getElementById('vcard-' + cardKey);
-  if (card) card.classList.add('selected');
-
   videoPlayer.src = '/api/plot/' + filename;
   videoPlayer.load();
   videoPlayer.play().catch(() => {});
-
   loadVideoAnalysisData(filename);
+}
+
+function onVideoDrag(e) { e.preventDefault(); document.getElementById('videoDropBox').classList.add('drag'); }
+function offVideoDrag() { document.getElementById('videoDropBox').classList.remove('drag'); }
+function onVideoDrop(e) {
+  e.preventDefault(); offVideoDrag();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('video/')) {
+    analyzeAndPlayUploadedVideo(f);
+  }
 }
 
 function handleVideoUpload(e) {
   const f = e.target.files[0];
   if (!f) return;
-  videoPlayer.src = URL.createObjectURL(f);
+  analyzeAndPlayUploadedVideo(f);
+}
+
+async function analyzeAndPlayUploadedVideo(file) {
+  const statusEl = document.getElementById('videoProcessingStatus');
+  if (statusEl) statusEl.classList.remove('hidden');
+
+  const btn = document.getElementById('analyzeVideoBtn');
+  const txt = document.getElementById('vBtnText');
+  const sp  = document.getElementById('vSpinner');
+  if (btn) btn.disabled = true;
+  if (txt) txt.textContent = `Screening "${file.name}"…`;
+  if (sp)  sp.style.display = 'block';
+
+  // Preview immediate video source
+  const localUrl = URL.createObjectURL(file);
+  videoPlayer.src = localUrl;
   videoPlayer.load();
   videoPlayer.play().catch(() => {});
-  alert(`Loaded custom video "${f.name}". Click "Run Full Video Screening" below!`);
+
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('threshold', currentThreshold);
+    fd.append('kalman_q', 0.01);
+    fd.append('kalman_r', 0.10);
+    fd.append('max_frames', 250);
+
+    const res = await fetch('/api/analyze-video', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.error) {
+      alert('Analysis error: ' + data.error);
+      return;
+    }
+
+    videoAnalysisData = data;
+    currentClipFile = file.name;
+
+    if (data.video_url) {
+      videoPlayer.src = data.video_url;
+      videoPlayer.load();
+      videoPlayer.play().catch(() => {});
+    }
+
+    document.getElementById('statFrames').textContent = data.total_frames;
+    document.getElementById('statPotholes').textContent = data.pothole_frames;
+    document.getElementById('statPct').textContent = data.pothole_pct + '%';
+    document.getElementById('statSpeed').textContent = `${data.fps} FPS (${data.elapsed_sec}s)`;
+
+    renderKalmanChart(data.frames, data.threshold);
+
+  } catch (err) {
+    alert('Failed to analyze video: ' + err.message);
+  } finally {
+    if (statusEl) statusEl.classList.add('hidden');
+    if (btn) btn.disabled = false;
+    if (txt) txt.textContent = '▶ Run Full Video Screening & Temporal Analysis';
+    if (sp)  sp.style.display = 'none';
+  }
 }
 
 // ── Continuous Highlighting Loop (requestAnimationFrame) ──
