@@ -259,8 +259,90 @@ async def get_metrics():
 async def get_plot(plot_name: str):
     plot_file = BASE_DIR / plot_name
     if plot_file.exists():
-        return FileResponse(str(plot_file), media_type="image/png")
+        media_type = "video/mp4" if plot_name.lower().endswith(".mp4") else "image/png"
+        return FileResponse(str(plot_file), media_type=media_type)
     return JSONResponse({"error": "Plot not found"}, status_code=404)
+
+@app.get("/api/video-analysis")
+async def get_video_analysis():
+    cache_path = BASE_DIR / "video_analysis_cache.json"
+    if cache_path.exists():
+        with open(cache_path) as f:
+            return JSONResponse(json.load(f))
+    return JSONResponse({"error": "Cache not generated"}, status_code=404)
+
+@app.post("/api/analyze-video")
+async def analyze_video(
+    file: Optional[UploadFile] = File(None),
+    clip_name: Optional[str] = Form("sample_test_short.mp4"),
+    threshold: float = Form(DEFAULT_THRESHOLD),
+    kalman_q: float = Form(0.01),
+    kalman_r: float = Form(0.10),
+    max_frames: int = Form(120),
+    frame_stride: int = Form(1)
+):
+    t0 = time.time()
+    temp_path = None
+    if file and file.filename:
+        temp_dir = BASE_DIR / "temp_uploads"
+        temp_dir.mkdir(exist_ok=True)
+        temp_path = temp_dir / file.filename
+        contents = await file.read()
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        video_src = str(temp_path)
+    else:
+        video_src = str(BASE_DIR / clip_name)
+
+    cap = cv2.VideoCapture(video_src)
+    if not cap.isOpened():
+        return JSONResponse({"error": f"Cannot open video: {video_src}"}, status_code=400)
+
+    kf = KalmanFilter1D(Q=kalman_q, R=kalman_r)
+    frames_data = []
+    idx = 0
+    pothole_count = 0
+    
+    while cap.isOpened() and len(frames_data) < max_frames:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if idx % frame_stride == 0:
+            pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            tensor = transform(pil_img)
+            with torch.no_grad():
+                logit = model(tensor.unsqueeze(0))
+            raw_p = torch.sigmoid(logit).item()
+            smooth_p = kf.update(raw_p)
+            is_pot = bool(smooth_p >= threshold)
+            if is_pot:
+                pothole_count += 1
+            frames_data.append({
+                "frame": idx + 1,
+                "raw": round(raw_p, 4),
+                "smoothed": round(smooth_p, 4),
+                "is_pothole": is_pot
+            })
+        idx += 1
+    cap.release()
+    if temp_path and temp_path.exists():
+        try: temp_path.unlink()
+        except: pass
+
+    elapsed = time.time() - t0
+    fps = round(len(frames_data) / max(elapsed, 0.001), 1)
+
+    return JSONResponse({
+        "status": "success",
+        "threshold": round(threshold, 2),
+        "total_frames": len(frames_data),
+        "pothole_frames": pothole_count,
+        "pothole_pct": round(100.0 * pothole_count / max(len(frames_data), 1), 1),
+        "elapsed_sec": round(elapsed, 2),
+        "fps": fps,
+        "frames": frames_data
+    })
+
 
 @app.post("/api/predict")
 async def predict_image(
