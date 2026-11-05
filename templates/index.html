@@ -1,589 +1,522 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PotholeAI — Road Surface Intelligence</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pothole Detection System</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            brand: {
-              dark: '#080612',
-              card: 'rgba(23, 17, 44, 0.55)',
-              border: 'rgba(168, 85, 247, 0.14)',
-              purple: '#A855F7',
-              violet: '#8B5CF6',
-              indigo: '#6366F1'
-            }
-          }
-        }
-      }
-    }
-  </script>
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    min-height: 100vh;
+  }
 
-  <style>
-    /* Ambient Glow Background matching the reference image */
-    body {
-      background-color: #070510;
-      background-image: 
-        radial-gradient(at 50% 15%, rgba(139, 92, 246, 0.18) 0px, transparent 55%),
-        radial-gradient(at 85% 20%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-        radial-gradient(at 15% 85%, rgba(168, 85, 247, 0.1) 0px, transparent 45%);
-      background-attachment: fixed;
-      color: #E2E8F0;
-    }
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 28px 48px 0;
+  }
+  header .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #7c3aed;
+    box-shadow: 0 0 10px #7c3aed;
+  }
+  header h1 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.3px; }
+  header p  { font-size: 0.78rem; color: #8b949e; margin-top: 2px; }
 
-    /* Translucent Frosted Glass */
-    .glass-box {
-      background: rgba(22, 16, 42, 0.58);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      border: 1px solid rgba(192, 132, 252, 0.12);
-      box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.55);
-    }
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 24px 48px 0;
+    border-bottom: 1px solid #21262d;
+    margin-bottom: 0;
+  }
+  .tab {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: #8b949e;
+    font-size: 0.88rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab:hover { color: #e6edf3; }
+  .tab.active { color: #fff; border-bottom-color: #7c3aed; font-weight: 500; }
 
-    .glass-card {
-      background: rgba(28, 21, 54, 0.45);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .glass-card:hover {
-      background: rgba(38, 28, 74, 0.6);
-      border-color: rgba(192, 132, 252, 0.35);
-      transform: translateY(-2px);
-    }
+  /* ── Main Container ── */
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 36px 24px 60px;
+  }
 
-    /* Active Glowing Capsule */
-    .nav-pill-active {
-      background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(99, 102, 241, 0.15) 100%);
-      border: 1px solid rgba(216, 180, 254, 0.45);
-      box-shadow: 0 0 20px -3px rgba(168, 85, 247, 0.35);
-      color: #FFFFFF !important;
-    }
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
 
-    .purple-glow {
-      box-shadow: 0 0 35px -5px rgba(168, 85, 247, 0.3);
-    }
+  /* ── Cards ── */
+  .card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    margin-bottom: 16px;
+  }
 
-    /* Hide scrollbars */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
+  /* ── Upload Zone ── */
+  .upload-zone {
+    border: 2px dashed #30363d;
+    border-radius: 10px;
+    padding: 36px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 20px;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: #7c3aed; background: #1a1f2e; }
+  .upload-zone input { display: none; }
+  .upload-zone .icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-zone p { color: #8b949e; font-size: 0.88rem; }
+  .upload-zone span { color: #7c3aed; font-weight: 500; cursor: pointer; }
+
+  /* ── Sample Grid ── */
+  .sample-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .sample-thumb {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s, transform 0.15s;
+    position: relative;
+  }
+  .sample-thumb:hover { transform: scale(1.04); border-color: #7c3aed44; }
+  .sample-thumb.selected { border-color: #7c3aed; }
+  .sample-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .sample-thumb .badge {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.65);
+    font-size: 0.6rem;
+    text-align: center;
+    padding: 3px;
+    color: #ccc;
+  }
+
+  /* ── Result Banner ── */
+  .result-banner {
+    display: none;
+    border-radius: 10px;
+    padding: 16px 22px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .result-banner.pothole { background: #2a0a0a; border: 1px solid #f85149; }
+  .result-banner.normal  { background: #0a1f0e; border: 1px solid #3fb950; }
+  .result-banner .label  { font-size: 1.3rem; font-weight: 700; }
+  .result-banner .conf   { font-size: 0.85rem; color: #8b949e; }
+  .result-banner.hidden  { display: none !important; }
+
+  /* ── Image Row ── */
+  .img-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .img-cell { border-radius: 8px; overflow: hidden; background: #0d1117; }
+  .img-cell img { width: 100%; display: block; }
+  .img-cell .caption {
+    text-align: center;
+    font-size: 0.72rem;
+    color: #8b949e;
+    padding: 6px 0;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.88rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #7c3aed; color: #fff; }
+  .btn-ghost   { background: #21262d; color: #e6edf3; }
+  .btn-row     { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid #30363d;
+    border-top-color: #7c3aed;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Metric Row ── */
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .metric-cell {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .metric-cell .val { font-size: 1.7rem; font-weight: 700; color: #fff; }
+  .metric-cell .lbl { font-size: 0.75rem; color: #8b949e; margin-top: 4px; }
+
+  /* ── Plot Grid ── */
+  .plot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  .plot-cell { border-radius: 10px; overflow: hidden; background: #161b22; border: 1px solid #21262d; }
+  .plot-cell img { width: 100%; display: block; }
+  .plot-cell .caption { text-align: center; font-size: 0.75rem; color: #8b949e; padding: 8px; }
+
+  /* ── Video ── */
+  .video-wrap { border-radius: 10px; overflow: hidden; background: #000; margin-bottom: 16px; }
+  video { width: 100%; display: block; max-height: 480px; }
+
+  /* ── GradCAM row ── */
+  .gradcam-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .gradcam-cell { border-radius: 10px; overflow: hidden; background: #161b22; border: 1px solid #21262d; }
+  .gradcam-cell img { width: 100%; display: block; }
+  .gradcam-cell .caption { text-align: center; font-size: 0.75rem; color: #8b949e; padding: 8px; }
+
+  /* ── Loading state ── */
+  #runBtn { min-width: 120px; justify-content: center; }
+</style>
 </head>
+<body>
 
-<body class="min-h-screen font-sans flex items-center justify-center p-3 sm:p-5 selection:bg-purple-600 selection:text-white">
+<!-- Header -->
+<header>
+  <div class="dot"></div>
+  <div>
+    <h1>Pothole Detection System</h1>
+    <p>Deep Learning · B.Tech Sem V · PyTorch · Grad-CAM</p>
+  </div>
+</header>
 
-  <!-- MAIN APP CONTAINER (Matching ChatGPT Frosted Glass Mockup) -->
-  <div class="glass-box w-full max-w-[1440px] h-[92vh] rounded-[28px] overflow-hidden flex flex-col border border-purple-500/15 shadow-2xl relative">
+<!-- Tabs -->
+<nav class="tabs">
+  <button class="tab active" onclick="switchTab('image', this)">Image Detection</button>
+  <button class="tab" onclick="switchTab('video', this)">Video</button>
+  <button class="tab" onclick="switchTab('metrics', this)">Results</button>
+  <button class="tab" onclick="switchTab('gradcam', this)">Grad-CAM</button>
+</nav>
 
-    <!-- TOP BAR -->
-    <header class="h-14 border-b border-white/[0.06] flex items-center justify-between px-6 bg-black/10">
-      <div class="flex items-center space-x-3">
-        <!-- Logo -->
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
-          <i data-lucide="scan" class="w-4 h-4 text-white"></i>
-        </div>
-        <span class="font-extrabold text-white text-base tracking-tight">Pothole<span class="text-purple-400">AI</span></span>
+<div class="content">
+
+  <!-- ══════════════ IMAGE TAB ══════════════ -->
+  <div id="tab-image" class="panel active">
+
+    <!-- Upload -->
+    <div class="card">
+      <div class="card-title">Upload or pick a sample image</div>
+
+      <div class="upload-zone" id="dropZone" ondragover="onDrag(event)" ondragleave="offDrag()" ondrop="onDrop(event)">
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" />
+        <div class="icon">📂</div>
+        <p>Drag & drop an image, or <span onclick="document.getElementById('fileInput').click()">browse</span></p>
       </div>
 
-      <!-- Quick Search Bar (Style-matching) -->
-      <div class="hidden sm:flex items-center bg-black/25 border border-white/5 rounded-full px-4 py-1.5 w-72 text-xs text-slate-400">
-        <i data-lucide="search" class="w-3.5 h-3.5 mr-2 text-slate-500"></i>
-        <span>Deep Learning Practical Project...</span>
-        <span class="ml-auto text-[10px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-slate-400">B.Tech</span>
+      <!-- Sample thumbnails -->
+      <div class="card-title" style="margin-top:4px">Sample images from dataset</div>
+      <div class="sample-grid" id="sampleGrid">
+        <div style="color:#8b949e;font-size:.8rem">Loading samples…</div>
       </div>
 
-      <!-- Status Pill -->
-      <div class="flex items-center space-x-2 text-xs">
-        <span class="px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1.5 font-mono text-[11px]">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> PyTorch Model Ready
-        </span>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="runBtn" onclick="runPrediction()">
+          <span id="btnText">Analyse</span>
+          <div class="spinner" id="spinner"></div>
+        </button>
+        <button class="btn btn-ghost" onclick="clearResult()">Clear</button>
       </div>
-    </header>
+    </div>
 
-    <!-- BODY: 3-COLUMN LAYOUT -->
-    <div class="flex-1 flex overflow-hidden">
+    <!-- Result banner -->
+    <div class="result-banner hidden" id="resultBanner">
+      <span id="resultEmoji" style="font-size:1.6rem">⚠️</span>
+      <div>
+        <div class="label" id="resultLabel">—</div>
+        <div class="conf" id="resultConf">—</div>
+      </div>
+    </div>
 
-      <!-- 1. LEFT SIDEBAR (Navigation & Recent) -->
-      <aside class="w-60 border-r border-white/[0.06] p-4 flex flex-col justify-between hidden md:flex bg-black/15">
-        <div class="space-y-6">
-          <nav class="space-y-1.5">
-            <button onclick="setTab('inspect')" id="nav-inspect" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white nav-pill-active transition">
-              <i data-lucide="sparkles" class="w-4 h-4 text-purple-300"></i>
-              <span>Inspection Studio</span>
-            </button>
-            <button onclick="setTab('video')" id="nav-video" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition">
-              <i data-lucide="video" class="w-4 h-4"></i>
-              <span>Video Screening</span>
-            </button>
-            <button onclick="setTab('benchmarks')" id="nav-benchmarks" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition">
-              <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
-              <span>Evaluation Curves</span>
-            </button>
-            <button onclick="setTab('gradcam')" id="nav-gradcam" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition">
-              <i data-lucide="eye" class="w-4 h-4"></i>
-              <span>Grad-CAM Saliency</span>
-            </button>
-          </nav>
+    <!-- Image triplet -->
+    <div class="img-row" id="imgRow" style="display:none">
+      <div class="img-cell">
+        <img id="imgOrig" src="" alt="Original" />
+        <div class="caption">Original</div>
+      </div>
+      <div class="img-cell">
+        <img id="imgHeat" src="" alt="Heatmap" />
+        <div class="caption">Grad-CAM Heatmap</div>
+      </div>
+      <div class="img-cell">
+        <img id="imgOver" src="" alt="Overlay" />
+        <div class="caption">Overlay</div>
+      </div>
+    </div>
 
-          <!-- Dataset Partition -->
-          <div class="pt-4 border-t border-white/[0.06] space-y-2 text-xs">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block px-1">Partition Breakdown</span>
-            <div class="space-y-1.5 text-[11px] font-mono">
-              <div class="flex justify-between px-2 py-1 rounded bg-white/[0.02] text-slate-400">
-                <span>Train Set</span>
-                <span class="text-purple-300">494 imgs</span>
-              </div>
-              <div class="flex justify-between px-2 py-1 rounded bg-white/[0.02] text-slate-400">
-                <span>Validation</span>
-                <span class="text-purple-300">106 imgs</span>
-              </div>
-              <div class="flex justify-between px-2 py-1 rounded bg-white/[0.02] text-slate-400">
-                <span>Held-out Test</span>
-                <span class="text-purple-300">106 imgs</span>
-              </div>
-            </div>
-          </div>
-        </div>
+  </div>
 
-        <!-- Footer Meta -->
-        <div class="pt-3 border-t border-white/[0.06] text-[11px] text-slate-500">
-          <div class="flex items-center gap-2">
-            <div class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs">N</div>
-            <span class="font-medium text-slate-300">B.Tech Sem V DL</span>
-          </div>
-        </div>
-      </aside>
-
-      <!-- 2. CENTER CANVAS (Simple, Aesthetic, Focused) -->
-      <main class="flex-1 overflow-y-auto p-6 lg:p-8 flex flex-col justify-between space-y-6">
-
-        <!-- ── TAB 1: INSPECTION STUDIO ── -->
-        <div id="view-inspect" class="space-y-6 flex-1 flex flex-col">
-          
-          <!-- Inspiring Centered Header -->
-          <div class="text-center pt-2 pb-1 space-y-2">
-            <h2 class="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-              What road surface would you like to inspect?
-            </h2>
-            <p class="text-xs text-slate-400 max-w-lg mx-auto">
-              Custom ResNet CNN trained from scratch with Grad-CAM activation backpropagation.
-            </p>
-          </div>
-
-          <!-- Frosted Input Upload Box (Styled like ChatGPT's message box) -->
-          <div class="max-w-2xl w-full mx-auto">
-            <div id="drop-zone" class="glass-card rounded-2xl p-4 sm:p-5 border border-purple-500/20 hover:border-purple-400/50 cursor-pointer shadow-lg shadow-purple-950/20 relative group">
-              <input type="file" id="file-input" accept="image/*" class="hidden">
-              <div class="flex items-center gap-4">
-                <div class="w-11 h-11 rounded-xl bg-purple-500/15 text-purple-300 flex items-center justify-center group-hover:scale-105 transition">
-                  <i data-lucide="image-plus" class="w-5 h-5"></i>
-                </div>
-                <div class="flex-1">
-                  <p class="text-sm font-semibold text-slate-200">Upload or drop a road image here</p>
-                  <p class="text-xs text-slate-400 mt-0.5">JPG or PNG • Automatic 128×128 preprocessing</p>
-                </div>
-                <div class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md shadow-purple-600/30 flex items-center gap-1.5">
-                  <i data-lucide="scan" class="w-3.5 h-3.5"></i>
-                  <span>Inspect</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Quick Preset Pill Chips (Like the inspiration card prompts) -->
-            <div class="mt-4">
-              <div class="text-[11px] font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-                <i data-lucide="layers" class="w-3 h-3 text-purple-400"></i> Or select from benchmark dataset:
-              </div>
-              <div id="sample-chips" class="flex flex-wrap gap-2">
-                <!-- Populated via JS -->
-              </div>
-            </div>
-          </div>
-
-          <!-- RESULT STAGE (Only shown once an image is active) -->
-          <div id="result-stage" class="max-w-3xl w-full mx-auto space-y-4 pt-2 hidden">
-            
-            <!-- Result Alert Pill -->
-            <div id="result-pill" class="glass-card rounded-2xl p-4 border flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div id="pill-icon-box" class="w-10 h-10 rounded-xl flex items-center justify-center text-white"></div>
-                <div>
-                  <h4 id="pill-title" class="font-bold text-sm text-white">Detection Result</h4>
-                  <p id="pill-sub" class="text-xs text-slate-400">Threshold: τ = <span id="pill-thresh">0.31</span></p>
-                </div>
-              </div>
-              <div class="text-right">
-                <div id="pill-prob" class="text-2xl font-extrabold font-mono text-purple-300">—</div>
-                <div class="text-[10px] text-slate-500 uppercase font-mono">Confidence</div>
-              </div>
-            </div>
-
-            <!-- Saliency Comparison Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div class="glass-card p-2.5 rounded-xl text-center space-y-1.5">
-                <div class="aspect-square rounded-lg bg-black/40 overflow-hidden border border-white/5 flex items-center justify-center">
-                  <img id="res-original" src="" class="w-full h-full object-cover">
-                </div>
-                <span class="text-[11px] font-semibold text-slate-400 font-mono block">1. Input Image</span>
-              </div>
-              <div class="glass-card p-2.5 rounded-xl text-center space-y-1.5">
-                <div class="aspect-square rounded-lg bg-black/40 overflow-hidden border border-white/5 flex items-center justify-center">
-                  <img id="res-heatmap" src="" class="w-full h-full object-cover">
-                </div>
-                <span class="text-[11px] font-semibold text-purple-300 font-mono block">2. Grad-CAM Energy</span>
-              </div>
-              <div class="glass-card p-2.5 rounded-xl text-center space-y-1.5">
-                <div class="aspect-square rounded-lg bg-black/40 overflow-hidden border border-white/5 flex items-center justify-center">
-                  <img id="res-overlay" src="" class="w-full h-full object-cover">
-                </div>
-                <span class="text-[11px] font-semibold text-emerald-300 font-mono block">3. Localized Contour</span>
-              </div>
-            </div>
-
-            <!-- Sleek Minimal Threshold Slider -->
-            <div class="glass-card p-3 rounded-xl flex items-center gap-4 text-xs">
-              <span class="text-slate-400 font-medium whitespace-nowrap">Threshold (τ):</span>
-              <input type="range" id="threshold-slider" min="0.10" max="0.90" step="0.01" value="0.31"
-                     class="flex-1 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500">
-              <span id="threshold-val" class="font-mono text-purple-300 font-bold w-10 text-right">0.31</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- ── TAB 2: VIDEO SCREENING ── -->
-        <div id="view-video" class="space-y-5 hidden max-w-3xl w-full mx-auto">
-          <div class="glass-card p-5 rounded-2xl space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-base font-bold text-white">Road Video Temporal Screening</h3>
-                <p class="text-xs text-slate-400">1-D Kalman Filter eliminates spurious single-frame probability flickering.</p>
-              </div>
-              <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-mono font-semibold border border-emerald-500/20">
-                Kalman Q=0.01, R=0.10
-              </span>
-            </div>
-
-            <div class="aspect-video rounded-xl bg-black/50 overflow-hidden border border-white/10">
-              <video id="video-player" controls class="w-full h-full object-contain">
-                <source src="/api/plot/sample_test_short.mp4" type="video/mp4">
-              </video>
-            </div>
-
-            <div class="flex items-center gap-3">
-              <button onclick="switchVideo('/api/plot/sample_test_short.mp4')" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-slate-300 transition">
-                ⚡ Sample Clip (4.8s)
-              </button>
-              <button onclick="switchVideo('/api/plot/sample_road_video.mp4')" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-slate-300 transition">
-                📹 Full Dashcam (27.7s)
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── TAB 3: EVALUATION CURVES ── -->
-        <div id="view-benchmarks" class="space-y-4 hidden max-w-4xl w-full mx-auto">
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="glass-card p-3 rounded-xl text-center">
-              <span class="text-[10px] text-slate-400 uppercase font-mono block">Accuracy</span>
-              <span class="text-2xl font-extrabold text-white font-mono">91.51%</span>
-            </div>
-            <div class="glass-card p-3 rounded-xl text-center">
-              <span class="text-[10px] text-slate-400 uppercase font-mono block">Precision</span>
-              <span class="text-2xl font-extrabold text-purple-300 font-mono">92.45%</span>
-            </div>
-            <div class="glass-card p-3 rounded-xl text-center">
-              <span class="text-[10px] text-slate-400 uppercase font-mono block">Recall</span>
-              <span class="text-2xl font-extrabold text-emerald-300 font-mono">90.74%</span>
-            </div>
-            <div class="glass-card p-3 rounded-xl text-center">
-              <span class="text-[10px] text-slate-400 uppercase font-mono block">ROC-AUC</span>
-              <span class="text-2xl font-extrabold text-indigo-300 font-mono">0.9669</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="glass-card p-3 rounded-xl space-y-1.5">
-              <span class="text-xs font-semibold text-slate-300 block">Training Curves</span>
-              <img src="/api/plot/training_curves.png" class="w-full rounded-lg border border-white/5">
-            </div>
-            <div class="glass-card p-3 rounded-xl space-y-1.5">
-              <span class="text-xs font-semibold text-slate-300 block">Confusion Matrix</span>
-              <img src="/api/plot/confusion_matrices.png" class="w-full rounded-lg border border-white/5">
-            </div>
-            <div class="glass-card p-3 rounded-xl space-y-1.5">
-              <span class="text-xs font-semibold text-slate-300 block">ROC Curves</span>
-              <img src="/api/plot/roc_curves.png" class="w-full rounded-lg border border-white/5">
-            </div>
-            <div class="glass-card p-3 rounded-xl space-y-1.5">
-              <span class="text-xs font-semibold text-slate-300 block">Precision-Recall Curves</span>
-              <img src="/api/plot/pr_curves.png" class="w-full rounded-lg border border-white/5">
-            </div>
-          </div>
-        </div>
-
-        <!-- ── TAB 4: GRAD-CAM XAI ── -->
-        <div id="view-gradcam" class="space-y-4 hidden max-w-4xl w-full mx-auto">
-          <div class="glass-card p-4 rounded-xl space-y-2">
-            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block">True Positives: Accurate Spatial Attention</span>
-            <img src="/api/plot/gradcam_tp.png" class="w-full rounded-lg border border-white/5">
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="glass-card p-3 rounded-xl space-y-1.5">
-              <span class="text-xs font-bold text-amber-400 block">False Positives (Shadows)</span>
-              <img src="/api/plot/gradcam_fp.png" class="w-full rounded-lg border border-white/5">
-            </div>
-            <div class="glass-card p-3 rounded-xl space-y-1.5">
-              <span class="text-xs font-bold text-rose-400 block">False Negatives (Shallow)</span>
-              <img src="/api/plot/gradcam_fn.png" class="w-full rounded-lg border border-white/5">
-            </div>
-          </div>
-        </div>
-
-      </main>
-
-      <!-- 3. RIGHT PANEL (Style-matching the GPT-4o Card in Reference Image) -->
-      <aside class="w-72 border-l border-white/[0.06] p-4 flex flex-col justify-between hidden xl:flex bg-black/15">
-        
-        <div class="space-y-4">
-          <!-- Model Info Card with Purple Glow (Matching Reference) -->
-          <div class="glass-card rounded-2xl p-4 border border-purple-500/20 relative overflow-hidden">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-bold text-white flex items-center gap-1.5">
-                ResNet-18 <span class="text-purple-400 text-xs">Custom</span>
-              </span>
-              <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-            </div>
-            <p class="text-xs text-slate-400 leading-relaxed mb-3">
-              Custom convolutional backbone with BatchNorm and residual skip blocks trained entirely from scratch.
-            </p>
-            <!-- 3D Layer Graphic / Graphic Icon -->
-            <div class="h-20 rounded-xl bg-gradient-to-tr from-purple-900/40 via-indigo-900/30 to-purple-500/20 border border-purple-500/20 flex items-center justify-center relative purple-glow">
-              <i data-lucide="layers" class="w-8 h-8 text-purple-300"></i>
-            </div>
-          </div>
-
-          <!-- Capabilities Checklist (Matching Reference) -->
-          <div class="space-y-2">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block px-1">Capabilities</span>
-            <div class="space-y-1.5 text-xs text-slate-300">
-              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
-                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> Scratch Training</span>
-                <span class="text-[10px] font-mono text-purple-300">0 Pretrained</span>
-              </div>
-              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
-                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> Grad-CAM XAI</span>
-                <span class="text-[10px] font-mono text-purple-300">last_conv</span>
-              </div>
-              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
-                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> 1-D Kalman Filter</span>
-                <span class="text-[10px] font-mono text-purple-300">Smooth</span>
-              </div>
-              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
-                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> Weak Localization</span>
-                <span class="text-[10px] font-mono text-purple-300">BBox</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Activity / Performance Stats (Matching Reference) -->
-          <div class="glass-card rounded-xl p-3 space-y-2 text-xs">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Empirical Metrics</span>
-            <div class="flex justify-between items-center text-slate-300">
-              <span>Test Accuracy</span>
-              <span class="font-mono font-bold text-white">91.51%</span>
-            </div>
-            <div class="flex justify-between items-center text-slate-300">
-              <span>ROC-AUC</span>
-              <span class="font-mono font-bold text-purple-300">0.9669</span>
-            </div>
-            <div class="flex justify-between items-center text-slate-300">
-              <span>Parameters</span>
-              <span class="font-mono font-bold text-slate-300">716,865</span>
-            </div>
-            <!-- Mini Purple Wave Graphic -->
-            <div class="h-6 w-full flex items-end gap-1 pt-1 opacity-70">
-              <div class="w-full h-2 bg-purple-500/40 rounded-sm"></div>
-              <div class="w-full h-3 bg-purple-500/50 rounded-sm"></div>
-              <div class="w-full h-5 bg-purple-500/70 rounded-sm"></div>
-              <div class="w-full h-4 bg-purple-500/60 rounded-sm"></div>
-              <div class="w-full h-6 bg-purple-400 rounded-sm"></div>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="text-[10px] text-slate-500 text-center font-mono">
-          B.Tech Sem V • Deep Learning Project
-        </div>
-      </aside>
-
+  <!-- ══════════════ VIDEO TAB ══════════════ -->
+  <div id="tab-video" class="panel">
+    <div class="card">
+      <div class="card-title">Sample road footage</div>
+      <div class="video-wrap">
+        <video id="videoPlayer" controls autoplay muted loop>
+          <source src="/api/plot/sample_test_short.mp4" type="video/mp4" />
+        </video>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="switchVideo('sample_test_short.mp4')">Clip 1 — Test (120 frames)</button>
+        <button class="btn btn-ghost"   onclick="switchVideo('sample_road_video.mp4')">Clip 2 — Full road (692 frames)</button>
+      </div>
     </div>
   </div>
 
-  <!-- SCRIPT -->
-  <script>
-    lucide.createIcons();
+  <!-- ══════════════ METRICS TAB ══════════════ -->
+  <div id="tab-metrics" class="panel">
 
-    let currentSamplePath = null;
-    let currentFile = null;
+    <div class="metric-row">
+      <div class="metric-cell">
+        <div class="val" id="mAcc">—</div>
+        <div class="lbl">Accuracy</div>
+      </div>
+      <div class="metric-cell">
+        <div class="val" id="mPrec">—</div>
+        <div class="lbl">Precision</div>
+      </div>
+      <div class="metric-cell">
+        <div class="val" id="mRec">—</div>
+        <div class="lbl">Recall</div>
+      </div>
+      <div class="metric-cell">
+        <div class="val" id="mF1">—</div>
+        <div class="lbl">F1 Score</div>
+      </div>
+    </div>
 
-    function setTab(tabId) {
-      ['inspect', 'video', 'benchmarks', 'gradcam'].forEach(t => {
-        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabId);
-        const nav = document.getElementById(`nav-${t}`);
-        if (nav) {
-          if (t === tabId) {
-            nav.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white nav-pill-active transition";
-          } else {
-            nav.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition";
-          }
-        }
-      });
-    }
+    <div class="plot-grid">
+      <div class="plot-cell">
+        <img src="/api/plot/training_curves.png" alt="Training curves" />
+        <div class="caption">Training Curves</div>
+      </div>
+      <div class="plot-cell">
+        <img src="/api/plot/confusion_matrices.png" alt="Confusion matrix" />
+        <div class="caption">Confusion Matrix</div>
+      </div>
+      <div class="plot-cell">
+        <img src="/api/plot/roc_curves.png" alt="ROC curve" />
+        <div class="caption">ROC Curve</div>
+      </div>
+      <div class="plot-cell">
+        <img src="/api/plot/pr_curves.png" alt="PR curve" />
+        <div class="caption">Precision-Recall Curve</div>
+      </div>
+    </div>
 
-    function switchVideo(src) {
-      const v = document.getElementById('video-player');
-      v.src = src;
-      v.load();
-      v.play();
-    }
+  </div>
 
-    // Threshold Slider
-    const slider = document.getElementById('threshold-slider');
-    const thresholdDisplay = document.getElementById('threshold-val');
-    slider.addEventListener('input', (e) => {
-      thresholdDisplay.textContent = parseFloat(e.target.value).toFixed(2);
-      document.getElementById('pill-thresh').textContent = parseFloat(e.target.value).toFixed(2);
+  <!-- ══════════════ GRAD-CAM TAB ══════════════ -->
+  <div id="tab-gradcam" class="panel">
+    <div class="card">
+      <div class="card-title">Grad-CAM Explainability — Weakly supervised localisation</div>
+      <div class="gradcam-grid">
+        <div class="gradcam-cell">
+          <img src="/api/plot/gradcam_tp.png" alt="True Positive" />
+          <div class="caption">True Positive — Pothole correctly detected</div>
+        </div>
+        <div class="gradcam-cell">
+          <img src="/api/plot/gradcam_fp.png" alt="False Positive" />
+          <div class="caption">False Positive — Normal road mis-classified</div>
+        </div>
+        <div class="gradcam-cell">
+          <img src="/api/plot/gradcam_fn.png" alt="False Negative" />
+          <div class="caption">False Negative — Pothole missed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ── State ──
+let selectedSamplePath = null;
+let selectedFile       = null;
+const THRESH = {{ default_threshold }};
+
+// ── Tab switching ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b   => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Load sample thumbnails ──
+async function loadSamples() {
+  const grid = document.getElementById('sampleGrid');
+  try {
+    const res  = await fetch('/api/samples');
+    const list = await res.json();
+    grid.innerHTML = '';
+    list.slice(0, 12).forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'sample-thumb';
+      div.innerHTML = `<img src="/api/sample-image/${s.type}/${s.filename}" loading="lazy" />
+                       <div class="badge">${s.label}</div>`;
+      div.onclick = () => {
+        document.querySelectorAll('.sample-thumb').forEach(t => t.classList.remove('selected'));
+        div.classList.add('selected');
+        selectedSamplePath = s.path;
+        selectedFile = null;
+        clearResult();
+      };
+      grid.appendChild(div);
     });
-    slider.addEventListener('change', () => {
-      if (currentFile || currentSamplePath) analyze();
-    });
+  } catch(e) {
+    grid.innerHTML = '<div style="color:#8b949e;font-size:.8rem">Could not load samples.</div>';
+  }
+}
 
-    // Load Sample Chips
-    async function initSamples() {
-      try {
-        const res = await fetch('/api/samples');
-        const data = await res.json();
-        const container = document.getElementById('sample-chips');
-        container.innerHTML = '';
+// ── Upload ──
+function handleFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  selectedFile = f; selectedSamplePath = null;
+  document.querySelectorAll('.sample-thumb').forEach(t => t.classList.remove('selected'));
+  clearResult();
+}
+function onDrag(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('drag'); }
+function offDrag()  { document.getElementById('dropZone').classList.remove('drag'); }
+function onDrop(e)  {
+  e.preventDefault(); offDrag();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) { selectedFile = f; selectedSamplePath = null; clearResult(); }
+}
 
-        data.slice(0, 6).forEach((s, idx) => {
-          const btn = document.createElement('button');
-          btn.className = "px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-purple-600/20 border border-white/5 hover:border-purple-500/40 text-xs text-slate-300 hover:text-white transition flex items-center gap-1.5";
-          btn.onclick = () => {
-            currentSamplePath = s.path;
-            currentFile = null;
-            analyze();
-          };
-          const icon = s.type === 'pothole' ? '🕳️' : '🛣️';
-          btn.innerHTML = `<span>${icon}</span> <span>${s.label} ${idx + 1}</span>`;
-          container.appendChild(btn);
-        });
+// ── Clear ──
+function clearResult() {
+  document.getElementById('resultBanner').classList.add('hidden');
+  document.getElementById('imgRow').style.display = 'none';
+}
 
-        // Trigger first sample on load
-        if (data.length > 0) {
-          currentSamplePath = data[0].path;
-          analyze();
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
+// ── Run prediction ──
+async function runPrediction() {
+  if (!selectedFile && !selectedSamplePath) {
+    alert('Pick an image first (upload or click a sample).');
+    return;
+  }
+  const btn = document.getElementById('runBtn');
+  document.getElementById('btnText').textContent = 'Analysing…';
+  document.getElementById('spinner').style.display = 'block';
+  btn.disabled = true;
 
-    // Drag and Drop
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
-    dropZone.onclick = () => fileInput.click();
-    fileInput.onchange = (e) => {
-      if (e.target.files.length > 0) {
-        currentFile = e.target.files[0];
-        currentSamplePath = null;
-        analyze();
-      }
-    };
-    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-purple-400'); };
-    dropZone.ondragleave = () => { dropZone.classList.remove('border-purple-400'); };
-    dropZone.ondrop = (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('border-purple-400');
-      if (e.dataTransfer.files.length > 0) {
-        currentFile = e.dataTransfer.files[0];
-        currentSamplePath = null;
-        analyze();
-      }
-    };
+  try {
+    const fd = new FormData();
+    fd.append('threshold', THRESH);
+    if (selectedFile)       fd.append('file', selectedFile);
+    else if (selectedSamplePath) fd.append('sample_path', selectedSamplePath);
 
-    // Analyze Call
-    async function analyze() {
-      const formData = new FormData();
-      formData.append('threshold', slider.value);
-      if (currentFile) formData.append('file', currentFile);
-      else if (currentSamplePath) formData.append('sample_path', currentSamplePath);
-      else return;
+    const res  = await fetch('/api/predict', { method: 'POST', body: fd });
+    const data = await res.json();
 
-      try {
-        const res = await fetch('/api/predict', { method: 'POST', body: formData });
-        const data = await res.json();
-        
-        // Show stage
-        document.getElementById('result-stage').classList.remove('hidden');
+    if (data.error) { alert(data.error); return; }
 
-        // Images
-        document.getElementById('res-original').src = `data:image/jpeg;base64,${data.images.original}`;
-        document.getElementById('res-heatmap').src = `data:image/jpeg;base64,${data.images.heatmap}`;
-        document.getElementById('res-overlay').src = `data:image/jpeg;base64,${data.images.overlay}`;
+    // Banner
+    const banner = document.getElementById('resultBanner');
+    banner.className = 'result-banner ' + (data.is_pothole ? 'pothole' : 'normal');
+    document.getElementById('resultEmoji').textContent = data.is_pothole ? '⚠️' : '✅';
+    document.getElementById('resultLabel').textContent = data.is_pothole ? 'POTHOLE DETECTED' : 'NORMAL ROAD';
+    document.getElementById('resultConf').textContent  =
+      `Confidence ${(data.probability * 100).toFixed(1)}% · Threshold ${(data.threshold * 100).toFixed(0)}%`;
 
-        // Pill
-        const pill = document.getElementById('result-pill');
-        const iconBox = document.getElementById('pill-icon-box');
-        const title = document.getElementById('pill-title');
-        const sub = document.getElementById('pill-sub');
-        const prob = document.getElementById('pill-prob');
+    // Images
+    document.getElementById('imgOrig').src = 'data:image/jpeg;base64,' + data.images.original;
+    document.getElementById('imgHeat').src = 'data:image/jpeg;base64,' + data.images.heatmap;
+    document.getElementById('imgOver').src = 'data:image/jpeg;base64,' + data.images.overlay;
+    document.getElementById('imgRow').style.display = 'grid';
 
-        prob.textContent = `${(data.probability * 100).toFixed(1)}%`;
-        document.getElementById('pill-thresh').textContent = data.threshold;
+  } catch(e) {
+    alert('Request failed: ' + e.message);
+  } finally {
+    document.getElementById('btnText').textContent = 'Analyse';
+    document.getElementById('spinner').style.display = 'none';
+    btn.disabled = false;
+  }
+}
 
-        if (data.is_pothole) {
-          pill.className = "glass-card rounded-2xl p-4 border border-rose-500/40 bg-rose-950/20 flex items-center justify-between";
-          iconBox.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-rose-500/20 text-rose-400";
-          iconBox.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
-          title.textContent = "Pothole Crater Detected";
-          sub.textContent = `Crater area ~ ${data.bbox.area_px} px² • Latency: ${data.latency_ms} ms`;
-          prob.className = "text-2xl font-extrabold font-mono text-rose-400";
-        } else {
-          pill.className = "glass-card rounded-2xl p-4 border border-emerald-500/40 bg-emerald-950/20 flex items-center justify-between";
-          iconBox.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/20 text-emerald-400";
-          iconBox.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i>';
-          title.textContent = "Normal Roadway Surface";
-          sub.textContent = `Within normal surface texture variance • Latency: ${data.latency_ms} ms`;
-          prob.className = "text-2xl font-extrabold font-mono text-emerald-400";
-        }
-        lucide.createIcons();
-      } catch (e) {
-        console.error(e);
-      }
-    }
+// ── Video ──
+function switchVideo(clip) {
+  const v = document.getElementById('videoPlayer');
+  v.src = '/api/plot/' + clip;
+  v.load(); v.play();
+}
 
-    initSamples();
-  </script>
+// ── Metrics ──
+async function loadMetrics() {
+  try {
+    const res = await fetch('/api/metrics');
+    const m   = await res.json();
+    const b   = m.model_b_test || {};
+    document.getElementById('mAcc').textContent  = pct(b.accuracy);
+    document.getElementById('mPrec').textContent = pct(b.precision);
+    document.getElementById('mRec').textContent  = pct(b.recall);
+    document.getElementById('mF1').textContent   = (b.f1 || 0).toFixed(3);
+  } catch(e) {}
+}
+function pct(v) { return v ? (v * 100).toFixed(1) + '%' : '—'; }
+
+// ── Init ──
+loadSamples();
+loadMetrics();
+</script>
 </body>
 </html>
