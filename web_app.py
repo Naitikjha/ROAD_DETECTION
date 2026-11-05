@@ -210,11 +210,14 @@ def cam_to_base64(cam: np.ndarray) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "default_threshold": DEFAULT_THRESHOLD,
-        "metrics": METRICS
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "default_threshold": DEFAULT_THRESHOLD,
+            "metrics": METRICS
+        }
+    )
 
 @app.get("/api/samples")
 async def get_samples():
@@ -352,3 +355,4 @@ async def predict_video_frame(
         "bbox": {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
         "kalman_state": {"x": kf.x, "P": kf.P}
     })
+
