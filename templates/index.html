@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Road Pothole Detection & Localization Intelligence Suite</title>
+  <title>PotholeAI — Road Surface Intelligence</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
     tailwind.config = {
@@ -25,16 +23,13 @@
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            cyber: {
-              900: '#060913',
-              800: '#0B1120',
-              700: '#131D33',
-              600: '#1E293B',
-              500: '#334155',
-              accent: '#3B82F6',
-              emerald: '#10B981',
-              rose: '#EF4444',
-              amber: '#F59E0B'
+            brand: {
+              dark: '#080612',
+              card: 'rgba(23, 17, 44, 0.55)',
+              border: 'rgba(168, 85, 247, 0.14)',
+              purple: '#A855F7',
+              violet: '#8B5CF6',
+              indigo: '#6366F1'
             }
           }
         }
@@ -43,510 +38,433 @@
   </script>
 
   <style>
+    /* Ambient Glow Background matching the reference image */
     body {
-      background: radial-gradient(circle at 10% 10%, #0d1629 0%, #060913 100%);
+      background-color: #070510;
+      background-image: 
+        radial-gradient(at 50% 15%, rgba(139, 92, 246, 0.18) 0px, transparent 55%),
+        radial-gradient(at 85% 20%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 15% 85%, rgba(168, 85, 247, 0.1) 0px, transparent 45%);
+      background-attachment: fixed;
       color: #E2E8F0;
     }
-    .glass-panel {
-      background: rgba(17, 24, 39, 0.7);
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+
+    /* Translucent Frosted Glass */
+    .glass-box {
+      background: rgba(22, 16, 42, 0.58);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(192, 132, 252, 0.12);
+      box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.55);
     }
+
     .glass-card {
-      background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.75) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(28, 21, 54, 0.45);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .neon-border-red {
-      box-shadow: 0 0 20px -3px rgba(239, 68, 68, 0.35);
-      border-color: rgba(239, 68, 68, 0.6);
+    .glass-card:hover {
+      background: rgba(38, 28, 74, 0.6);
+      border-color: rgba(192, 132, 252, 0.35);
+      transform: translateY(-2px);
     }
-    .neon-border-green {
-      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
-      border-color: rgba(16, 185, 129, 0.6);
+
+    /* Active Glowing Capsule */
+    .nav-pill-active {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(99, 102, 241, 0.15) 100%);
+      border: 1px solid rgba(216, 180, 254, 0.45);
+      box-shadow: 0 0 20px -3px rgba(168, 85, 247, 0.35);
+      color: #FFFFFF !important;
     }
-    /* Hide scrollbar for gallery */
+
+    .purple-glow {
+      box-shadow: 0 0 35px -5px rgba(168, 85, 247, 0.3);
+    }
+
+    /* Hide scrollbars */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 
-<body class="min-h-screen font-sans flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+<body class="min-h-screen font-sans flex items-center justify-center p-3 sm:p-5 selection:bg-purple-600 selection:text-white">
 
-  <!-- TOP APP BAR -->
-  <header class="border-b border-white/10 bg-cyber-900/80 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+  <!-- MAIN APP CONTAINER (Matching ChatGPT Frosted Glass Mockup) -->
+  <div class="glass-box w-full max-w-[1440px] h-[92vh] rounded-[28px] overflow-hidden flex flex-col border border-purple-500/15 shadow-2xl relative">
+
+    <!-- TOP BAR -->
+    <header class="h-14 border-b border-white/[0.06] flex items-center justify-between px-6 bg-black/10">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <i data-lucide="scan" class="w-5 h-5 text-white"></i>
+        <!-- Logo -->
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
+          <i data-lucide="scan" class="w-4 h-4 text-white"></i>
         </div>
-        <div>
-          <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
-            ROAD DAMAGE INTELLIGENCE
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">AUTONOMOUS VISION</span>
-          </h1>
-          <p class="text-xs text-slate-400">Deep Learning Practical System • Pothole Detection & Weakly-Supervised Localization</p>
-        </div>
+        <span class="font-extrabold text-white text-base tracking-tight">Pothole<span class="text-purple-400">AI</span></span>
       </div>
 
-      <!-- Real-time Architecture Tags -->
-      <div class="hidden md:flex items-center space-x-2 text-xs font-mono">
-        <span class="px-2.5 py-1 rounded-md bg-slate-800/80 text-slate-300 border border-white/5 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> PyTorch 2.9 (From Scratch)
-        </span>
-        <span class="px-2.5 py-1 rounded-md bg-slate-800/80 text-blue-400 border border-white/5">
-          ResNet + BatchNorm
-        </span>
-        <span class="px-2.5 py-1 rounded-md bg-slate-800/80 text-purple-400 border border-white/5">
-          Grad-CAM XAI
-        </span>
-        <span class="px-2.5 py-1 rounded-md bg-slate-800/80 text-amber-400 border border-white/5">
-          1-D Kalman Filter
-        </span>
-      </div>
-    </div>
-  </header>
-
-  <!-- MAIN VIEWPORT CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
-
-    <!-- NAVIGATION TABS -->
-    <div class="flex border-b border-white/10 gap-2 pb-1">
-      <button onclick="switchTab('image')" id="tab-btn-image" class="tab-btn active px-4 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 text-white bg-blue-600 shadow-lg shadow-blue-600/30 transition">
-        <i data-lucide="image" class="w-4 h-4"></i> Image Saliency Inspection
-      </button>
-      <button onclick="switchTab('video')" id="tab-btn-video" class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 text-slate-400 hover:text-white hover:bg-white/5 transition">
-        <i data-lucide="video" class="w-4 h-4"></i> Video Stream & Kalman Tracking
-      </button>
-      <button onclick="switchTab('metrics')" id="tab-btn-metrics" class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 text-slate-400 hover:text-white hover:bg-white/5 transition">
-        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Empirical Benchmarks & Curves
-      </button>
-      <button onclick="switchTab('explainability')" id="tab-btn-explainability" class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 text-slate-400 hover:text-white hover:bg-white/5 transition">
-        <i data-lucide="brain-circuit" class="w-4 h-4"></i> Grad-CAM Diagnostics
-      </button>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <!-- TAB 1: IMAGE SALIENCY INSPECTION -->
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <section id="tab-image" class="space-y-6">
-
-      <!-- QUICK SAMPLE SELECTOR CAROUSEL -->
-      <div class="glass-panel p-4 rounded-2xl">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <i data-lucide="sparkles" class="w-4 h-4 text-blue-400"></i>
-            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Test Samples from Benchmark Dataset</h2>
-          </div>
-          <span class="text-xs text-slate-400">Click any photograph below for instant 1-click evaluation:</span>
-        </div>
-        
-        <div id="sample-carousel" class="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-          <!-- Dynamically populated via JS -->
-          <div class="text-xs text-slate-500 py-4">Loading sample road surfaces...</div>
-        </div>
+      <!-- Quick Search Bar (Style-matching) -->
+      <div class="hidden sm:flex items-center bg-black/25 border border-white/5 rounded-full px-4 py-1.5 w-72 text-xs text-slate-400">
+        <i data-lucide="search" class="w-3.5 h-3.5 mr-2 text-slate-500"></i>
+        <span>Deep Learning Practical Project...</span>
+        <span class="ml-auto text-[10px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-slate-400">B.Tech</span>
       </div>
 
-      <!-- TWO COLUMN WORKBENCH -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Status Pill -->
+      <div class="flex items-center space-x-2 text-xs">
+        <span class="px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1.5 font-mono text-[11px]">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> PyTorch Model Ready
+        </span>
+      </div>
+    </header>
 
-        <!-- LEFT: Upload & Controls (4 Cols) -->
-        <div class="lg:col-span-4 space-y-5">
-          <!-- Dropzone -->
-          <div class="glass-panel p-5 rounded-2xl space-y-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <i data-lucide="upload-cloud" class="w-4 h-4 text-blue-400"></i> Input Road Photograph
-            </h3>
-            
-            <div id="drop-zone" class="border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-xl p-6 text-center cursor-pointer transition bg-slate-900/40 hover:bg-slate-900/80 group">
-              <input type="file" id="file-input" accept="image/*" class="hidden">
-              <div class="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition">
-                <i data-lucide="file-image" class="w-6 h-6"></i>
-              </div>
-              <p class="text-sm font-semibold text-slate-200">Drag & drop photo here</p>
-              <p class="text-xs text-slate-500 mt-1">or click to browse from your device</p>
-            </div>
+    <!-- BODY: 3-COLUMN LAYOUT -->
+    <div class="flex-1 flex overflow-hidden">
 
-            <!-- Threshold Controller -->
-            <div class="pt-2 border-t border-white/5 space-y-2">
-              <div class="flex justify-between items-center text-xs">
-                <span class="font-medium text-slate-300">Decision Threshold (τ)</span>
-                <span id="threshold-val" class="font-mono font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">0.31</span>
-              </div>
-              <input type="range" id="threshold-slider" min="0.10" max="0.90" step="0.01" value="0.31"
-                     class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
-              <div class="flex justify-between text-[10px] text-slate-500">
-                <span>0.10 (High Sensitivity)</span>
-                <span class="text-blue-400 font-semibold">Val-Optimal: 0.31</span>
-                <span>0.90 (High Precision)</span>
-              </div>
-            </div>
-
-            <button onclick="reanalyzeCurrent()" class="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2">
-              <i data-lucide="refresh-cw" class="w-4 h-4"></i> Run Saliency Inspection
+      <!-- 1. LEFT SIDEBAR (Navigation & Recent) -->
+      <aside class="w-60 border-r border-white/[0.06] p-4 flex flex-col justify-between hidden md:flex bg-black/15">
+        <div class="space-y-6">
+          <nav class="space-y-1.5">
+            <button onclick="setTab('inspect')" id="nav-inspect" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white nav-pill-active transition">
+              <i data-lucide="sparkles" class="w-4 h-4 text-purple-300"></i>
+              <span>Inspection Studio</span>
             </button>
-          </div>
+            <button onclick="setTab('video')" id="nav-video" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition">
+              <i data-lucide="video" class="w-4 h-4"></i>
+              <span>Video Screening</span>
+            </button>
+            <button onclick="setTab('benchmarks')" id="nav-benchmarks" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition">
+              <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+              <span>Evaluation Curves</span>
+            </button>
+            <button onclick="setTab('gradcam')" id="nav-gradcam" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+              <span>Grad-CAM Saliency</span>
+            </button>
+          </nav>
 
-          <!-- Spatial Telemetry Card -->
-          <div id="telemetry-card" class="glass-panel p-5 rounded-2xl space-y-3 hidden">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400"></i> Weakly-Supervised Spatial Coordinates
-            </h3>
-            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div class="glass-card p-2 rounded-lg">
-                <span class="text-slate-500 text-[10px] block">BOUNDING RECT</span>
-                <span id="bbox-coords" class="text-slate-200 font-bold">[—]</span>
+          <!-- Dataset Partition -->
+          <div class="pt-4 border-t border-white/[0.06] space-y-2 text-xs">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block px-1">Partition Breakdown</span>
+            <div class="space-y-1.5 text-[11px] font-mono">
+              <div class="flex justify-between px-2 py-1 rounded bg-white/[0.02] text-slate-400">
+                <span>Train Set</span>
+                <span class="text-purple-300">494 imgs</span>
               </div>
-              <div class="glass-card p-2 rounded-lg">
-                <span class="text-slate-500 text-[10px] block">CRATER SPATIAL AREA</span>
-                <span id="bbox-area" class="text-slate-200 font-bold">— px²</span>
+              <div class="flex justify-between px-2 py-1 rounded bg-white/[0.02] text-slate-400">
+                <span>Validation</span>
+                <span class="text-purple-300">106 imgs</span>
               </div>
-              <div class="glass-card p-2 rounded-lg">
-                <span class="text-slate-500 text-[10px] block">INFERENCE LATENCY</span>
-                <span id="latency-val" class="text-slate-200 font-bold">— ms</span>
-              </div>
-              <div class="glass-card p-2 rounded-lg">
-                <span class="text-slate-500 text-[10px] block">INPUT RESOLUTION</span>
-                <span class="text-slate-200 font-bold">128 × 128 px</span>
+              <div class="flex justify-between px-2 py-1 rounded bg-white/[0.02] text-slate-400">
+                <span>Held-out Test</span>
+                <span class="text-purple-300">106 imgs</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- RIGHT: Live Saliency Display & Confidence HUD (8 Cols) -->
-        <div class="lg:col-span-8 space-y-5">
+        <!-- Footer Meta -->
+        <div class="pt-3 border-t border-white/[0.06] text-[11px] text-slate-500">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs">N</div>
+            <span class="font-medium text-slate-300">B.Tech Sem V DL</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 2. CENTER CANVAS (Simple, Aesthetic, Focused) -->
+      <main class="flex-1 overflow-y-auto p-6 lg:p-8 flex flex-col justify-between space-y-6">
+
+        <!-- ── TAB 1: INSPECTION STUDIO ── -->
+        <div id="view-inspect" class="space-y-6 flex-1 flex flex-col">
           
-          <!-- STATUS ALERT BANNER -->
-          <div id="status-banner" class="glass-panel p-5 rounded-2xl transition border">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3.5">
-                <div id="status-icon-box" class="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-800 text-slate-400">
-                  <i data-lucide="help-circle" class="w-6 h-6"></i>
+          <!-- Inspiring Centered Header -->
+          <div class="text-center pt-2 pb-1 space-y-2">
+            <h2 class="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+              What road surface would you like to inspect?
+            </h2>
+            <p class="text-xs text-slate-400 max-w-lg mx-auto">
+              Custom ResNet CNN trained from scratch with Grad-CAM activation backpropagation.
+            </p>
+          </div>
+
+          <!-- Frosted Input Upload Box (Styled like ChatGPT's message box) -->
+          <div class="max-w-2xl w-full mx-auto">
+            <div id="drop-zone" class="glass-card rounded-2xl p-4 sm:p-5 border border-purple-500/20 hover:border-purple-400/50 cursor-pointer shadow-lg shadow-purple-950/20 relative group">
+              <input type="file" id="file-input" accept="image/*" class="hidden">
+              <div class="flex items-center gap-4">
+                <div class="w-11 h-11 rounded-xl bg-purple-500/15 text-purple-300 flex items-center justify-center group-hover:scale-105 transition">
+                  <i data-lucide="image-plus" class="w-5 h-5"></i>
                 </div>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-slate-200">Upload or drop a road image here</p>
+                  <p class="text-xs text-slate-400 mt-0.5">JPG or PNG • Automatic 128×128 preprocessing</p>
+                </div>
+                <div class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md shadow-purple-600/30 flex items-center gap-1.5">
+                  <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                  <span>Inspect</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Preset Pill Chips (Like the inspiration card prompts) -->
+            <div class="mt-4">
+              <div class="text-[11px] font-medium text-slate-400 mb-2 flex items-center gap-1.5">
+                <i data-lucide="layers" class="w-3 h-3 text-purple-400"></i> Or select from benchmark dataset:
+              </div>
+              <div id="sample-chips" class="flex flex-wrap gap-2">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- RESULT STAGE (Only shown once an image is active) -->
+          <div id="result-stage" class="max-w-3xl w-full mx-auto space-y-4 pt-2 hidden">
+            
+            <!-- Result Alert Pill -->
+            <div id="result-pill" class="glass-card rounded-2xl p-4 border flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div id="pill-icon-box" class="w-10 h-10 rounded-xl flex items-center justify-center text-white"></div>
                 <div>
-                  <h3 id="status-title" class="text-xl font-extrabold text-white">System Ready for Road Screening</h3>
-                  <p id="status-desc" class="text-xs text-slate-400">Select a preloaded benchmark image or upload a photograph to begin.</p>
+                  <h4 id="pill-title" class="font-bold text-sm text-white">Detection Result</h4>
+                  <p id="pill-sub" class="text-xs text-slate-400">Threshold: τ = <span id="pill-thresh">0.31</span></p>
                 </div>
               </div>
               <div class="text-right">
-                <div id="prob-display" class="text-3xl font-extrabold font-mono text-slate-200">—</div>
-                <div class="text-[10px] font-mono text-slate-500 uppercase">Detection Likelihood</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TRI-PANEL SALIENCY VIEW -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <!-- Panel 1: Original Image -->
-            <div class="glass-panel p-3 rounded-2xl text-center space-y-2">
-              <div class="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-                <span>1. Photographic Feed</span>
-                <span class="text-[10px] font-mono text-slate-500">RAW</span>
-              </div>
-              <div class="aspect-square rounded-xl bg-slate-900 border border-white/5 overflow-hidden flex items-center justify-center relative">
-                <img id="view-original" src="" class="w-full h-full object-cover hidden" alt="Raw Image">
-                <span id="ph-original" class="text-xs text-slate-600">No input loaded</span>
+                <div id="pill-prob" class="text-2xl font-extrabold font-mono text-purple-300">—</div>
+                <div class="text-[10px] text-slate-500 uppercase font-mono">Confidence</div>
               </div>
             </div>
 
-            <!-- Panel 2: Grad-CAM Heatmap -->
-            <div class="glass-panel p-3 rounded-2xl text-center space-y-2">
-              <div class="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-                <span>2. Grad-CAM Saliency</span>
-                <span class="text-[10px] font-mono text-purple-400">ENERGY</span>
+            <!-- Saliency Comparison Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="glass-card p-2.5 rounded-xl text-center space-y-1.5">
+                <div class="aspect-square rounded-lg bg-black/40 overflow-hidden border border-white/5 flex items-center justify-center">
+                  <img id="res-original" src="" class="w-full h-full object-cover">
+                </div>
+                <span class="text-[11px] font-semibold text-slate-400 font-mono block">1. Input Image</span>
               </div>
-              <div class="aspect-square rounded-xl bg-slate-900 border border-white/5 overflow-hidden flex items-center justify-center relative">
-                <img id="view-heatmap" src="" class="w-full h-full object-cover hidden" alt="Heatmap">
-                <span id="ph-heatmap" class="text-xs text-slate-600">No saliency computed</span>
+              <div class="glass-card p-2.5 rounded-xl text-center space-y-1.5">
+                <div class="aspect-square rounded-lg bg-black/40 overflow-hidden border border-white/5 flex items-center justify-center">
+                  <img id="res-heatmap" src="" class="w-full h-full object-cover">
+                </div>
+                <span class="text-[11px] font-semibold text-purple-300 font-mono block">2. Grad-CAM Energy</span>
               </div>
-            </div>
-
-            <!-- Panel 3: Bounding Box Overlay -->
-            <div class="glass-panel p-3 rounded-2xl text-center space-y-2">
-              <div class="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-                <span>3. Saliency Contour & Box</span>
-                <span class="text-[10px] font-mono text-emerald-400">LOCALIZED</span>
-              </div>
-              <div class="aspect-square rounded-xl bg-slate-900 border border-white/5 overflow-hidden flex items-center justify-center relative">
-                <img id="view-overlay" src="" class="w-full h-full object-cover hidden" alt="Overlay">
-                <span id="ph-overlay" class="text-xs text-slate-600">Awaiting detection</span>
+              <div class="glass-card p-2.5 rounded-xl text-center space-y-1.5">
+                <div class="aspect-square rounded-lg bg-black/40 overflow-hidden border border-white/5 flex items-center justify-center">
+                  <img id="res-overlay" src="" class="w-full h-full object-cover">
+                </div>
+                <span class="text-[11px] font-semibold text-emerald-300 font-mono block">3. Localized Contour</span>
               </div>
             </div>
 
-          </div>
-
-          <!-- Methodological Disclaimer -->
-          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5 flex items-start gap-2.5 text-xs text-slate-400">
-            <i data-lucide="info" class="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5"></i>
-            <div>
-              <strong class="text-slate-300 font-semibold">Weakly-Supervised Localization Note:</strong>
-              Bounding boxes originate directly from the 50th-percentile contour thresholding of the Grad-CAM activation energy map produced by <code class="text-slate-300 font-mono">self.last_conv</code>. No coordinate ground-truth annotations were utilized during training; hence no mAP metric is claimed.
+            <!-- Sleek Minimal Threshold Slider -->
+            <div class="glass-card p-3 rounded-xl flex items-center gap-4 text-xs">
+              <span class="text-slate-400 font-medium whitespace-nowrap">Threshold (τ):</span>
+              <input type="range" id="threshold-slider" min="0.10" max="0.90" step="0.01" value="0.31"
+                     class="flex-1 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500">
+              <span id="threshold-val" class="font-mono text-purple-300 font-bold w-10 text-right">0.31</span>
             </div>
           </div>
 
         </div>
-      </div>
-    </section>
 
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <!-- TAB 2: VIDEO STREAM & KALMAN TRACKING -->
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <section id="tab-video" class="space-y-6 hidden">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        <!-- Left: Controls & Telemetry -->
-        <div class="lg:col-span-4 space-y-4">
-          <div class="glass-panel p-5 rounded-2xl space-y-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i> Kalman Video Settings
-            </h3>
-            
-            <div>
-              <label class="text-xs font-medium text-slate-300 block mb-1">Select Road Video Source</label>
-              <select id="video-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
-                <option value="/api/plot/sample_test_short.mp4">⚡ Quick Test Clip (120 frames, 4.8s)</option>
-                <option value="/api/plot/sample_road_video.mp4">📹 Full Dashcam Video (692 frames, 27.7s)</option>
-              </select>
-            </div>
-
-            <div class="space-y-3 pt-2 border-t border-white/5 text-xs">
-              <div class="flex items-center justify-between">
-                <span class="text-slate-300 font-medium">1-D Kalman Filter</span>
-                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px]">ACTIVE</span>
+        <!-- ── TAB 2: VIDEO SCREENING ── -->
+        <div id="view-video" class="space-y-5 hidden max-w-3xl w-full mx-auto">
+          <div class="glass-card p-5 rounded-2xl space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-white">Road Video Temporal Screening</h3>
+                <p class="text-xs text-slate-400">1-D Kalman Filter eliminates spurious single-frame probability flickering.</p>
               </div>
-              <div class="space-y-1">
-                <div class="flex justify-between text-slate-400 text-[11px]">
-                  <span>Process Noise (Q)</span>
-                  <span class="font-mono text-slate-200">0.010</span>
-                </div>
-                <div class="flex justify-between text-slate-400 text-[11px]">
-                  <span>Sensor Noise (R)</span>
-                  <span class="font-mono text-slate-200">0.100</span>
-                </div>
-                <div class="flex justify-between text-slate-400 text-[11px]">
-                  <span>Frame Stride</span>
-                  <span class="font-mono text-slate-200">2× Fast</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300">
-              <i data-lucide="shield-alert" class="w-3.5 h-3.5 inline mr-1"></i>
-              <strong>Syllabus Alignment:</strong> The Kalman filter dampens high-frequency frame flicker, maintaining temporal coherence across moving road video.
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: Video Player & Temporal Trajectory Chart -->
-        <div class="lg:col-span-8 space-y-4">
-          <div class="glass-panel p-5 rounded-2xl space-y-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
-              <span class="flex items-center gap-2">
-                <i data-lucide="play-circle" class="w-4 h-4 text-blue-400"></i> Video Playback & Temporal Trace
+              <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-mono font-semibold border border-emerald-500/20">
+                Kalman Q=0.01, R=0.10
               </span>
-              <span class="text-xs font-mono text-slate-400">720p HD Feed</span>
-            </h3>
+            </div>
 
-            <div class="aspect-video rounded-xl bg-black overflow-hidden border border-white/10 flex items-center justify-center">
-              <video id="road-video-player" controls class="w-full h-full object-contain">
+            <div class="aspect-video rounded-xl bg-black/50 overflow-hidden border border-white/10">
+              <video id="video-player" controls class="w-full h-full object-contain">
                 <source src="/api/plot/sample_test_short.mp4" type="video/mp4">
-                Your browser does not support HTML5 video.
               </video>
             </div>
 
-            <!-- Precomputed Kalman Trace Visualizer -->
-            <div class="pt-2">
-              <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
-                <span class="font-bold text-slate-200">Temporal Probability Trajectory (1-D Kalman Filter vs Raw CNN)</span>
-                <span class="text-emerald-400 font-mono">Flicker Free</span>
-              </div>
-              <div class="h-44 w-full bg-slate-900/80 p-2 rounded-xl border border-white/5">
-                <canvas id="kalman-chart"></canvas>
-              </div>
+            <div class="flex items-center gap-3">
+              <button onclick="switchVideo('/api/plot/sample_test_short.mp4')" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-slate-300 transition">
+                ⚡ Sample Clip (4.8s)
+              </button>
+              <button onclick="switchVideo('/api/plot/sample_road_video.mp4')" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-slate-300 transition">
+                📹 Full Dashcam (27.7s)
+              </button>
             </div>
           </div>
         </div>
 
-      </div>
-    </section>
+        <!-- ── TAB 3: EVALUATION CURVES ── -->
+        <div id="view-benchmarks" class="space-y-4 hidden max-w-4xl w-full mx-auto">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="glass-card p-3 rounded-xl text-center">
+              <span class="text-[10px] text-slate-400 uppercase font-mono block">Accuracy</span>
+              <span class="text-2xl font-extrabold text-white font-mono">91.51%</span>
+            </div>
+            <div class="glass-card p-3 rounded-xl text-center">
+              <span class="text-[10px] text-slate-400 uppercase font-mono block">Precision</span>
+              <span class="text-2xl font-extrabold text-purple-300 font-mono">92.45%</span>
+            </div>
+            <div class="glass-card p-3 rounded-xl text-center">
+              <span class="text-[10px] text-slate-400 uppercase font-mono block">Recall</span>
+              <span class="text-2xl font-extrabold text-emerald-300 font-mono">90.74%</span>
+            </div>
+            <div class="glass-card p-3 rounded-xl text-center">
+              <span class="text-[10px] text-slate-400 uppercase font-mono block">ROC-AUC</span>
+              <span class="text-2xl font-extrabold text-indigo-300 font-mono">0.9669</span>
+            </div>
+          </div>
 
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <!-- TAB 3: EMPIRICAL BENCHMARKS & CURVES -->
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <section id="tab-metrics" class="space-y-6 hidden">
-      <!-- 4 KPI Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="glass-panel p-4 rounded-xl text-center space-y-1">
-          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Classification Accuracy</span>
-          <span class="text-3xl font-extrabold font-mono text-white">91.51%</span>
-          <span class="text-[10px] text-emerald-400 block font-mono">Test Partition (N=106)</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="glass-card p-3 rounded-xl space-y-1.5">
+              <span class="text-xs font-semibold text-slate-300 block">Training Curves</span>
+              <img src="/api/plot/training_curves.png" class="w-full rounded-lg border border-white/5">
+            </div>
+            <div class="glass-card p-3 rounded-xl space-y-1.5">
+              <span class="text-xs font-semibold text-slate-300 block">Confusion Matrix</span>
+              <img src="/api/plot/confusion_matrices.png" class="w-full rounded-lg border border-white/5">
+            </div>
+            <div class="glass-card p-3 rounded-xl space-y-1.5">
+              <span class="text-xs font-semibold text-slate-300 block">ROC Curves</span>
+              <img src="/api/plot/roc_curves.png" class="w-full rounded-lg border border-white/5">
+            </div>
+            <div class="glass-card p-3 rounded-xl space-y-1.5">
+              <span class="text-xs font-semibold text-slate-300 block">Precision-Recall Curves</span>
+              <img src="/api/plot/pr_curves.png" class="w-full rounded-lg border border-white/5">
+            </div>
+          </div>
         </div>
-        <div class="glass-panel p-4 rounded-xl text-center space-y-1">
-          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Precision Rate</span>
-          <span class="text-3xl font-extrabold font-mono text-blue-400">92.45%</span>
-          <span class="text-[10px] text-slate-400 block font-mono">Low False Alarms (FP=4)</span>
-        </div>
-        <div class="glass-panel p-4 rounded-xl text-center space-y-1">
-          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Pothole Recall</span>
-          <span class="text-3xl font-extrabold font-mono text-emerald-400">90.74%</span>
-          <span class="text-[10px] text-slate-400 block font-mono">Sensitivity (TP=49)</span>
-        </div>
-        <div class="glass-panel p-4 rounded-xl text-center space-y-1">
-          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Area Under ROC (AUC)</span>
-          <span class="text-3xl font-extrabold font-mono text-purple-400">0.9669</span>
-          <span class="text-[10px] text-purple-300 block font-mono">High Separability</span>
-        </div>
-      </div>
 
-      <!-- Comparative Table -->
-      <div class="glass-panel p-5 rounded-2xl overflow-x-auto space-y-3">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">
-          Model Benchmark Matrix (Held-out Test Evaluation)
-        </h3>
-        <table class="w-full text-left text-xs border-collapse">
-          <thead>
-            <tr class="border-b border-white/10 text-slate-400 font-mono">
-              <th class="py-3 px-3">Architecture</th>
-              <th class="py-3 px-3">Parameters</th>
-              <th class="py-3 px-3">Accuracy</th>
-              <th class="py-3 px-3">Precision</th>
-              <th class="py-3 px-3">Recall</th>
-              <th class="py-3 px-3">F1 Score</th>
-              <th class="py-3 px-3">ROC-AUC</th>
-              <th class="py-3 px-3">F1 95% Bootstrap CI</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-white/5 font-mono">
-            <tr class="text-slate-400">
-              <td class="py-3 px-3 font-sans font-semibold text-slate-300">Majority Baseline (Always Pothole)</td>
-              <td class="py-3 px-3">—</td>
-              <td class="py-3 px-3">50.94%</td>
-              <td class="py-3 px-3">—</td>
-              <td class="py-3 px-3">100.0%</td>
-              <td class="py-3 px-3">0.6750</td>
-              <td class="py-3 px-3">0.5000</td>
-              <td class="py-3 px-3">—</td>
-            </tr>
-            <tr class="text-slate-300 bg-white/[0.02]">
-              <td class="py-3 px-3 font-sans font-semibold text-blue-300">Model A: Vanilla CNN</td>
-              <td class="py-3 px-3">126,529</td>
-              <td class="py-3 px-3 font-bold text-white">91.51%</td>
-              <td class="py-3 px-3">88.14%</td>
-              <td class="py-3 px-3 text-emerald-400 font-bold">96.30%</td>
-              <td class="py-3 px-3">0.9204</td>
-              <td class="py-3 px-3">0.9590</td>
-              <td class="py-3 px-3">[0.8571, 0.9655]</td>
-            </tr>
-            <tr class="text-slate-100 bg-blue-500/10 border-blue-500/20">
-              <td class="py-3 px-3 font-sans font-semibold text-emerald-400 flex items-center gap-1.5">
-                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i> Model B: ResNet CNN + BatchNorm
-              </td>
-              <td class="py-3 px-3">716,865</td>
-              <td class="py-3 px-3 font-bold text-white">91.51%</td>
-              <td class="py-3 px-3 font-bold text-emerald-400">92.45%</td>
-              <td class="py-3 px-3">90.74%</td>
-              <td class="py-3 px-3 font-bold text-white">0.9159</td>
-              <td class="py-3 px-3 font-bold text-purple-400">0.9669</td>
-              <td class="py-3 px-3 text-slate-300">[0.8496, 0.9663]</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <!-- ── TAB 4: GRAD-CAM XAI ── -->
+        <div id="view-gradcam" class="space-y-4 hidden max-w-4xl w-full mx-auto">
+          <div class="glass-card p-4 rounded-xl space-y-2">
+            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block">True Positives: Accurate Spatial Attention</span>
+            <img src="/api/plot/gradcam_tp.png" class="w-full rounded-lg border border-white/5">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="glass-card p-3 rounded-xl space-y-1.5">
+              <span class="text-xs font-bold text-amber-400 block">False Positives (Shadows)</span>
+              <img src="/api/plot/gradcam_fp.png" class="w-full rounded-lg border border-white/5">
+            </div>
+            <div class="glass-card p-3 rounded-xl space-y-1.5">
+              <span class="text-xs font-bold text-rose-400 block">False Negatives (Shallow)</span>
+              <img src="/api/plot/gradcam_fn.png" class="w-full rounded-lg border border-white/5">
+            </div>
+          </div>
+        </div>
 
-      <!-- 2x2 Plots Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div class="glass-panel p-4 rounded-xl space-y-2">
-          <span class="text-xs font-semibold text-slate-300 block">Training & Validation Trajectory</span>
-          <img src="/api/plot/training_curves.png" class="w-full rounded-lg border border-white/5" alt="Training Curves">
-        </div>
-        <div class="glass-panel p-4 rounded-xl space-y-2">
-          <span class="text-xs font-semibold text-slate-300 block">Test Confusion Matrices</span>
-          <img src="/api/plot/confusion_matrices.png" class="w-full rounded-lg border border-white/5" alt="Confusion Matrix">
-        </div>
-        <div class="glass-panel p-4 rounded-xl space-y-2">
-          <span class="text-xs font-semibold text-slate-300 block">Receiver Operating Characteristic (ROC)</span>
-          <img src="/api/plot/roc_curves.png" class="w-full rounded-lg border border-white/5" alt="ROC Curves">
-        </div>
-        <div class="glass-panel p-4 rounded-xl space-y-2">
-          <span class="text-xs font-semibold text-slate-300 block">Precision-Recall Curves</span>
-          <img src="/api/plot/pr_curves.png" class="w-full rounded-lg border border-white/5" alt="PR Curves">
-        </div>
-      </div>
-    </section>
+      </main>
 
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <!-- TAB 4: GRAD-CAM EXPLAINABILITY DIAGNOSTICS -->
-    <!-- ══════════════════════════════════════════════════════════════════════════ -->
-    <section id="tab-explainability" class="space-y-6 hidden">
-      <div class="glass-panel p-5 rounded-2xl space-y-3">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-          <i data-lucide="target" class="w-4 h-4 text-purple-400"></i> Explainable AI (XAI) Attribution & Error Analysis
-        </h3>
-        <p class="text-xs text-slate-400 leading-relaxed">
-          Grad-CAM computes the gradient of the predicted class score with respect to each feature map channel in the final convolutional layer (<code class="text-purple-300 font-mono">self.last_conv</code>). The channels are weighted via global average pooling of gradients, highlighting regions essential to decision making.
-        </p>
-      </div>
+      <!-- 3. RIGHT PANEL (Style-matching the GPT-4o Card in Reference Image) -->
+      <aside class="w-72 border-l border-white/[0.06] p-4 flex flex-col justify-between hidden xl:flex bg-black/15">
+        
+        <div class="space-y-4">
+          <!-- Model Info Card with Purple Glow (Matching Reference) -->
+          <div class="glass-card rounded-2xl p-4 border border-purple-500/20 relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-bold text-white flex items-center gap-1.5">
+                ResNet-18 <span class="text-purple-400 text-xs">Custom</span>
+              </span>
+              <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed mb-3">
+              Custom convolutional backbone with BatchNorm and residual skip blocks trained entirely from scratch.
+            </p>
+            <!-- 3D Layer Graphic / Graphic Icon -->
+            <div class="h-20 rounded-xl bg-gradient-to-tr from-purple-900/40 via-indigo-900/30 to-purple-500/20 border border-purple-500/20 flex items-center justify-center relative purple-glow">
+              <i data-lucide="layers" class="w-8 h-8 text-purple-300"></i>
+            </div>
+          </div>
 
-      <!-- True Positives Grid -->
-      <div class="glass-panel p-5 rounded-2xl space-y-3">
-        <div class="flex items-center justify-between">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-            <i data-lucide="check-circle-2" class="w-4 h-4"></i> True Positives: Accurate Crater Localization
-          </h4>
-          <span class="text-[11px] font-mono text-slate-400">TP Count: 49 / 54</span>
+          <!-- Capabilities Checklist (Matching Reference) -->
+          <div class="space-y-2">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block px-1">Capabilities</span>
+            <div class="space-y-1.5 text-xs text-slate-300">
+              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
+                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> Scratch Training</span>
+                <span class="text-[10px] font-mono text-purple-300">0 Pretrained</span>
+              </div>
+              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
+                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> Grad-CAM XAI</span>
+                <span class="text-[10px] font-mono text-purple-300">last_conv</span>
+              </div>
+              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
+                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> 1-D Kalman Filter</span>
+                <span class="text-[10px] font-mono text-purple-300">Smooth</span>
+              </div>
+              <div class="flex items-center justify-between py-1 px-2 rounded-lg bg-white/[0.02]">
+                <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i> Weak Localization</span>
+                <span class="text-[10px] font-mono text-purple-300">BBox</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity / Performance Stats (Matching Reference) -->
+          <div class="glass-card rounded-xl p-3 space-y-2 text-xs">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Empirical Metrics</span>
+            <div class="flex justify-between items-center text-slate-300">
+              <span>Test Accuracy</span>
+              <span class="font-mono font-bold text-white">91.51%</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-300">
+              <span>ROC-AUC</span>
+              <span class="font-mono font-bold text-purple-300">0.9669</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-300">
+              <span>Parameters</span>
+              <span class="font-mono font-bold text-slate-300">716,865</span>
+            </div>
+            <!-- Mini Purple Wave Graphic -->
+            <div class="h-6 w-full flex items-end gap-1 pt-1 opacity-70">
+              <div class="w-full h-2 bg-purple-500/40 rounded-sm"></div>
+              <div class="w-full h-3 bg-purple-500/50 rounded-sm"></div>
+              <div class="w-full h-5 bg-purple-500/70 rounded-sm"></div>
+              <div class="w-full h-4 bg-purple-500/60 rounded-sm"></div>
+              <div class="w-full h-6 bg-purple-400 rounded-sm"></div>
+            </div>
+          </div>
+
         </div>
-        <img src="/api/plot/gradcam_tp.png" class="w-full rounded-xl border border-white/10" alt="Grad-CAM TP">
-      </div>
 
-      <!-- Two-Column Failure Analysis -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div class="glass-panel p-5 rounded-2xl space-y-3">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <i data-lucide="alert-triangle" class="w-4 h-4"></i> False Positives: Tree Shadows & Seams
-          </h4>
-          <p class="text-[11px] text-slate-400">High-contrast tree shadows or dark asphalt repairs mimic depth cues.</p>
-          <img src="/api/plot/gradcam_fp.png" class="w-full rounded-xl border border-white/10" alt="Grad-CAM FP">
+        <div class="text-[10px] text-slate-500 text-center font-mono">
+          B.Tech Sem V • Deep Learning Project
         </div>
-        <div class="glass-panel p-5 rounded-2xl space-y-3">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
-            <i data-lucide="x-circle" class="w-4 h-4"></i> False Negatives: Shallow / Eroded Depressions
-          </h4>
-          <p class="text-[11px] text-slate-400">Worn, shallow potholes with low perimeter contrast or water reflection.</p>
-          <img src="/api/plot/gradcam_fn.png" class="w-full rounded-xl border border-white/10" alt="Grad-CAM FN">
-        </div>
-      </div>
-    </section>
+      </aside>
 
-  </main>
+    </div>
+  </div>
 
-  <!-- JAVASCRIPT LOGIC -->
+  <!-- SCRIPT -->
   <script>
     lucide.createIcons();
 
     let currentSamplePath = null;
     let currentFile = null;
 
-    // Tab Switching
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-600/30');
-        btn.classList.add('text-slate-400');
+    function setTab(tabId) {
+      ['inspect', 'video', 'benchmarks', 'gradcam'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabId);
+        const nav = document.getElementById(`nav-${t}`);
+        if (nav) {
+          if (t === tabId) {
+            nav.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white nav-pill-active transition";
+          } else {
+            nav.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition";
+          }
+        }
       });
-      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
-      if (activeBtn) {
-        activeBtn.classList.add('active', 'bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-600/30');
-        activeBtn.classList.remove('text-slate-400');
-      }
+    }
 
-      ['image', 'video', 'metrics', 'explainability'].forEach(t => {
-        const sec = document.getElementById(`tab-${t}`);
-        if (sec) sec.classList.toggle('hidden', t !== tabId);
-      });
-
-      if (tabId === 'video') {
-        renderKalmanChart();
-      }
+    function switchVideo(src) {
+      const v = document.getElementById('video-player');
+      v.src = src;
+      v.load();
+      v.play();
     }
 
     // Threshold Slider
@@ -554,51 +472,41 @@
     const thresholdDisplay = document.getElementById('threshold-val');
     slider.addEventListener('input', (e) => {
       thresholdDisplay.textContent = parseFloat(e.target.value).toFixed(2);
+      document.getElementById('pill-thresh').textContent = parseFloat(e.target.value).toFixed(2);
     });
     slider.addEventListener('change', () => {
-      reanalyzeCurrent();
+      if (currentFile || currentSamplePath) analyze();
     });
 
-    // Load Samples on Startup
-    async function loadSamples() {
+    // Load Sample Chips
+    async function initSamples() {
       try {
         const res = await fetch('/api/samples');
         const data = await res.json();
-        const carousel = document.getElementById('sample-carousel');
-        carousel.innerHTML = '';
+        const container = document.getElementById('sample-chips');
+        container.innerHTML = '';
 
-        data.forEach((sample, i) => {
-          const card = document.createElement('div');
-          card.className = "flex-shrink-0 w-28 glass-card rounded-xl p-2 cursor-pointer hover:border-blue-500 transition group text-center space-y-1.5";
-          card.onclick = () => selectSample(sample);
-
-          const isPothole = sample.type === 'pothole';
-          const badgeColor = isPothole ? 'text-rose-400 bg-rose-500/10' : 'text-emerald-400 bg-emerald-500/10';
-
-          card.innerHTML = `
-            <div class="w-full aspect-square rounded-lg overflow-hidden bg-slate-900 border border-white/5">
-              <img src="/api/sample-image/${sample.type}/${sample.filename}" class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy">
-            </div>
-            <div class="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded ${badgeColor} truncate">
-              ${sample.label}
-            </div>
-          `;
-          carousel.appendChild(card);
+        data.slice(0, 6).forEach((s, idx) => {
+          const btn = document.createElement('button');
+          btn.className = "px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-purple-600/20 border border-white/5 hover:border-purple-500/40 text-xs text-slate-300 hover:text-white transition flex items-center gap-1.5";
+          btn.onclick = () => {
+            currentSamplePath = s.path;
+            currentFile = null;
+            analyze();
+          };
+          const icon = s.type === 'pothole' ? '🕳️' : '🛣️';
+          btn.innerHTML = `<span>${icon}</span> <span>${s.label} ${idx + 1}</span>`;
+          container.appendChild(btn);
         });
 
-        // Auto select first sample
+        // Trigger first sample on load
         if (data.length > 0) {
-          selectSample(data[0]);
+          currentSamplePath = data[0].path;
+          analyze();
         }
       } catch (err) {
-        console.error("Failed to load samples", err);
+        console.error(err);
       }
-    }
-
-    async function selectSample(sample) {
-      currentSamplePath = sample.path;
-      currentFile = null;
-      analyzeImage();
     }
 
     // Drag and Drop
@@ -609,194 +517,73 @@
       if (e.target.files.length > 0) {
         currentFile = e.target.files[0];
         currentSamplePath = null;
-        analyzeImage();
+        analyze();
       }
     };
-
-    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500'); };
-    dropZone.ondragleave = () => { dropZone.classList.remove('border-blue-500'); };
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-purple-400'); };
+    dropZone.ondragleave = () => { dropZone.classList.remove('border-purple-400'); };
     dropZone.ondrop = (e) => {
       e.preventDefault();
-      dropZone.classList.remove('border-blue-500');
+      dropZone.classList.remove('border-purple-400');
       if (e.dataTransfer.files.length > 0) {
         currentFile = e.dataTransfer.files[0];
         currentSamplePath = null;
-        analyzeImage();
+        analyze();
       }
     };
 
-    function reanalyzeCurrent() {
-      if (currentFile || currentSamplePath) {
-        analyzeImage();
-      }
-    }
-
-    // Analysis API Call
-    async function analyzeImage() {
+    // Analyze Call
+    async function analyze() {
       const formData = new FormData();
       formData.append('threshold', slider.value);
-      if (currentFile) {
-        formData.append('file', currentFile);
-      } else if (currentSamplePath) {
-        formData.append('sample_path', currentSamplePath);
-      } else {
-        return;
-      }
-
-      // Show loading status
-      document.getElementById('status-title').textContent = "Analyzing road surface...";
-      document.getElementById('status-desc').textContent = "Extracting activations and computing Grad-CAM backpropagation...";
+      if (currentFile) formData.append('file', currentFile);
+      else if (currentSamplePath) formData.append('sample_path', currentSamplePath);
+      else return;
 
       try {
         const res = await fetch('/api/predict', { method: 'POST', body: formData });
         const data = await res.json();
-        renderResults(data);
-      } catch (err) {
-        console.error(err);
-      }
-    }
+        
+        // Show stage
+        document.getElementById('result-stage').classList.remove('hidden');
 
-    function renderResults(data) {
-      // 1. Update Images
-      document.getElementById('view-original').src = `data:image/jpeg;base64,${data.images.original}`;
-      document.getElementById('view-original').classList.remove('hidden');
-      document.getElementById('ph-original').classList.add('hidden');
+        // Images
+        document.getElementById('res-original').src = `data:image/jpeg;base64,${data.images.original}`;
+        document.getElementById('res-heatmap').src = `data:image/jpeg;base64,${data.images.heatmap}`;
+        document.getElementById('res-overlay').src = `data:image/jpeg;base64,${data.images.overlay}`;
 
-      document.getElementById('view-heatmap').src = `data:image/jpeg;base64,${data.images.heatmap}`;
-      document.getElementById('view-heatmap').classList.remove('hidden');
-      document.getElementById('ph-heatmap').classList.add('hidden');
+        // Pill
+        const pill = document.getElementById('result-pill');
+        const iconBox = document.getElementById('pill-icon-box');
+        const title = document.getElementById('pill-title');
+        const sub = document.getElementById('pill-sub');
+        const prob = document.getElementById('pill-prob');
 
-      document.getElementById('view-overlay').src = `data:image/jpeg;base64,${data.images.overlay}`;
-      document.getElementById('view-overlay').classList.remove('hidden');
-      document.getElementById('ph-overlay').classList.add('hidden');
+        prob.textContent = `${(data.probability * 100).toFixed(1)}%`;
+        document.getElementById('pill-thresh').textContent = data.threshold;
 
-      // 2. Update Banner & Probability
-      const banner = document.getElementById('status-banner');
-      const iconBox = document.getElementById('status-icon-box');
-      const title = document.getElementById('status-title');
-      const desc = document.getElementById('status-desc');
-      const probDisplay = document.getElementById('prob-display');
-
-      probDisplay.textContent = `${(data.probability * 100).toFixed(1)}%`;
-
-      if (data.is_pothole) {
-        banner.className = "glass-panel p-5 rounded-2xl transition border neon-border-red bg-rose-950/20";
-        iconBox.className = "w-12 h-12 rounded-xl flex items-center justify-center bg-rose-500/20 text-rose-400";
-        iconBox.innerHTML = '<i data-lucide="alert-octagon" class="w-6 h-6"></i>';
-        title.textContent = "POTHOLE CRATER IDENTIFIED";
-        desc.textContent = `Pothole detected with ${(data.probability * 100).toFixed(1)}% confidence above threshold ${data.threshold}. Spatial contours extracted.`;
-        probDisplay.className = "text-3xl font-extrabold font-mono text-rose-400";
-      } else {
-        banner.className = "glass-panel p-5 rounded-2xl transition border neon-border-green bg-emerald-950/20";
-        iconBox.className = "w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-500/20 text-emerald-400";
-        iconBox.innerHTML = '<i data-lucide="shield-check" class="w-6 h-6"></i>';
-        title.textContent = "NORMAL ROADWAY SURFACE";
-        desc.textContent = `Pothole likelihood is ${(data.probability * 100).toFixed(1)}%, comfortably below threshold ${data.threshold}. Surface clear.`;
-        probDisplay.className = "text-3xl font-extrabold font-mono text-emerald-400";
-      }
-
-      // 3. Update Telemetry
-      document.getElementById('telemetry-card').classList.remove('hidden');
-      document.getElementById('bbox-coords').textContent = `[${data.bbox.x1}, ${data.bbox.y1}] → [${data.bbox.x2}, ${data.bbox.y2}]`;
-      document.getElementById('bbox-area').textContent = `${data.bbox.area_px} px²`;
-      document.getElementById('latency-val').textContent = `${data.latency_ms} ms`;
-
-      lucide.createIcons();
-    }
-
-    // Video Source Switcher
-    const videoSelect = document.getElementById('video-select');
-    const videoPlayer = document.getElementById('road-video-player');
-    videoSelect.onchange = (e) => {
-      videoPlayer.src = e.target.value;
-      videoPlayer.load();
-      videoPlayer.play();
-    };
-
-    // Kalman Filter Chart Simulation
-    let kalmanChartInstance = null;
-    function renderKalmanChart() {
-      if (kalmanChartInstance) return;
-      const ctx = document.getElementById('kalman-chart').getContext('2d');
-      
-      const frames = Array.from({length: 60}, (_, i) => i + 1);
-      // Realistic simulation matching actual road video dataset run
-      const raw = frames.map(f => {
-        let base = (f > 15 && f < 38) ? 0.72 : 0.18;
-        return Math.max(0.05, Math.min(0.95, base + (Math.random() - 0.5) * 0.32));
-      });
-      
-      // Compute 1D Kalman
-      let x = 0.5, P = 1.0, Q = 0.01, R = 0.10;
-      const smooth = raw.map(z => {
-        P = P + Q;
-        const K = P / (P + R);
-        x = x + K * (z - x);
-        P = (1 - K) * P;
-        return x;
-      });
-
-      kalmanChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: frames,
-          datasets: [
-            {
-              label: 'Raw CNN Probability (Noisy)',
-              data: raw,
-              borderColor: 'rgba(148, 163, 184, 0.5)',
-              borderWidth: 1.5,
-              borderDash: [4, 4],
-              pointRadius: 0,
-              tension: 0.3
-            },
-            {
-              label: '1-D Kalman Filtered (Smoothed)',
-              data: smooth,
-              borderColor: '#38BDF8',
-              backgroundColor: 'rgba(56, 189, 248, 0.08)',
-              borderWidth: 2.5,
-              fill: true,
-              pointRadius: 0,
-              tension: 0.2
-            },
-            {
-              label: 'Decision Threshold (0.31)',
-              data: Array(60).fill(0.31),
-              borderColor: '#EF4444',
-              borderWidth: 1.5,
-              borderDash: [6, 6],
-              pointRadius: 0
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#94A3B8', font: { size: 10, family: 'JetBrains Mono' } }
-            }
-          },
-          scales: {
-            x: {
-              title: { display: true, text: 'Frame Index', color: '#64748B', font: { size: 10 } },
-              ticks: { color: '#64748B', font: { size: 9 } },
-              grid: { color: 'rgba(255,255,255,0.04)' }
-            },
-            y: {
-              min: 0, max: 1,
-              title: { display: true, text: 'Likelihood', color: '#64748B', font: { size: 10 } },
-              ticks: { color: '#64748B', font: { size: 9 } },
-              grid: { color: 'rgba(255,255,255,0.04)' }
-            }
-          }
+        if (data.is_pothole) {
+          pill.className = "glass-card rounded-2xl p-4 border border-rose-500/40 bg-rose-950/20 flex items-center justify-between";
+          iconBox.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-rose-500/20 text-rose-400";
+          iconBox.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
+          title.textContent = "Pothole Crater Detected";
+          sub.textContent = `Crater area ~ ${data.bbox.area_px} px² • Latency: ${data.latency_ms} ms`;
+          prob.className = "text-2xl font-extrabold font-mono text-rose-400";
+        } else {
+          pill.className = "glass-card rounded-2xl p-4 border border-emerald-500/40 bg-emerald-950/20 flex items-center justify-between";
+          iconBox.className = "w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/20 text-emerald-400";
+          iconBox.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i>';
+          title.textContent = "Normal Roadway Surface";
+          sub.textContent = `Within normal surface texture variance • Latency: ${data.latency_ms} ms`;
+          prob.className = "text-2xl font-extrabold font-mono text-emerald-400";
         }
-      });
+        lucide.createIcons();
+      } catch (e) {
+        console.error(e);
+      }
     }
 
-    // Initialize
-    loadSamples();
+    initSamples();
   </script>
 </body>
 </html>
