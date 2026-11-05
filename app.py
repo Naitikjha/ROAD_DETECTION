@@ -1,14 +1,12 @@
 """
-app.py — Presentation-Grade Interactive Web Application
-Project: Road Pothole Detection & Weakly-Supervised Localization System
+app.py — Interactive Web Demo for Pothole Detection System
 Course: Introduction to Deep Learning (B.Tech Sem V)
 Framework: PyTorch 2.9 (CPU)
 Features:
-  - Executive-grade Dark Dashboard UI
-  - Real-time Image Saliency Inspection (Grad-CAM)
-  - Road Video Temporal Screening with 1-D Kalman Filter
-  - Empirical Validation & Benchmark Analytics
-  - Explainable AI (XAI) Diagnostic Suite
+  - Image Detection (Dataset samples + Custom uploads)
+  - Video Detection with 1-D Kalman Filter probability smoothing
+  - Grad-CAM heatmap visualization and derived bounding boxes
+  - Evaluation curves & Viva cheat sheet
 """
 
 import streamlit as st
@@ -24,201 +22,18 @@ from pathlib import Path
 from PIL import Image
 import torchvision.transforms as T
 
-# ─────────────────────────── Page Configuration ───────────────────────────
-st.set_page_config(
-    page_title="Road Surface Pothole Detection System",
-    page_icon="🛣️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="Pothole Detection Demo", page_icon="🕳️", layout="wide")
 
-# ─────────────────────────── Global Paths ───────────────────────────
-CURRENT_DIR   = Path(__file__).parent.resolve()
-MODEL_PATH    = CURRENT_DIR / "pothole_final.pth"
-THRESH_PATH   = CURRENT_DIR / "threshold.json"
-CONFIG_PATH   = CURRENT_DIR / "model_config.json"
-METRICS_PATH  = CURRENT_DIR / "metrics_summary.json"
+CURRENT_DIR  = Path(__file__).parent.resolve()
+MODEL_PATH   = CURRENT_DIR / "pothole_final.pth"
+THRESH_PATH  = CURRENT_DIR / "threshold.json"
+CONFIG_PATH  = CURRENT_DIR / "model_config.json"
+METRICS_PATH = CURRENT_DIR / "metrics_summary.json"
 DATA_POTHOLES = Path(r"d:\NAITIK\DL PROJECT\ROAD_POTHHOLE\data\potholes")
 DATA_NORMAL   = Path(r"d:\NAITIK\DL PROJECT\ROAD_POTHHOLE\data\normal")
 SAMPLE_VIDEO  = Path(r"d:\NAITIK\DL PROJECT\ROAD_POTHHOLE\sample_pothole_video.mp4")
 
-# ─────────────────────────── Custom Premium CSS ───────────────────────────
-st.markdown("""
-<style>
-    /* Global reset & typography */
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    /* Hide standard Streamlit header & footer */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stDeployButton {display:none;}
-
-    /* Main Container background */
-    .stApp {
-        background: radial-gradient(circle at 15% 15%, #0d1527 0%, #060913 100%);
-        color: #E2E8F0;
-    }
-
-    /* Custom Header Card */
-    .hero-banner {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        padding: 1.75rem 2rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(12px);
-    }
-    
-    .hero-title {
-        font-size: 2.1rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 0;
-        letter-spacing: -0.02em;
-    }
-    
-    .hero-sub {
-        color: #94A3B8;
-        font-size: 0.98rem;
-        margin-top: 0.4rem;
-        margin-bottom: 0.9rem;
-    }
-
-    .badge-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .meta-badge {
-        font-size: 0.76rem;
-        font-weight: 600;
-        letter-spacing: 0.03em;
-        text-transform: uppercase;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        background: rgba(59, 130, 246, 0.12);
-        color: #60A5FA;
-        border: 1px solid rgba(59, 130, 246, 0.25);
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .meta-badge.emerald {
-        background: rgba(16, 185, 129, 0.12);
-        color: #34D399;
-        border-color: rgba(16, 185, 129, 0.25);
-    }
-    .meta-badge.purple {
-        background: rgba(168, 85, 247, 0.12);
-        color: #C084FC;
-        border-color: rgba(168, 85, 247, 0.25);
-    }
-
-    /* Glass Cards */
-    .glass-card {
-        background: rgba(17, 24, 39, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 14px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
-        margin-bottom: 1rem;
-    }
-
-    /* KPI Metric Cards */
-    .kpi-card {
-        background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 1.2rem;
-        text-align: center;
-        transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-    .kpi-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(96, 165, 250, 0.4);
-    }
-    .kpi-val {
-        font-size: 2rem;
-        font-weight: 800;
-        font-family: 'JetBrains Mono', monospace;
-        color: #F8FAFC;
-        margin: 0;
-    }
-    .kpi-label {
-        font-size: 0.8rem;
-        color: #94A3B8;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 0.2rem;
-    }
-
-    /* Status Alert Banners */
-    .alert-pothole {
-        background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(153, 27, 27, 0.25) 100%);
-        border: 1px solid rgba(239, 68, 68, 0.5);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        color: #FCA5A5;
-    }
-    .alert-normal {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 95, 70, 0.25) 100%);
-        border: 1px solid rgba(52, 211, 153, 0.5);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        color: #6EE7B7;
-    }
-
-    /* Styled Tab Navigation */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: rgba(15, 23, 42, 0.6);
-        padding: 6px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 8px 18px;
-        color: #94A3B8;
-        font-weight: 600;
-        font-size: 0.92rem;
-        border: none;
-        background-color: transparent;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-    }
-
-    /* Image Display Frames */
-    .img-box {
-        background: #0F172A;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        overflow: hidden;
-        text-align: center;
-        padding: 0.5rem;
-    }
-    .img-caption {
-        font-size: 0.78rem;
-        font-weight: 600;
-        color: #94A3B8;
-        margin-top: 0.4rem;
-        font-family: 'JetBrains Mono', monospace;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ─────────────────────────── Model Architecture (from scratch) ───────────────────────────
+# ─────────────────────────── Model & Architecture ───────────────────────────
 class ResidualBlock(nn.Module):
     def __init__(self, in_ch: int, out_ch: int, stride: int = 1):
         super().__init__()
@@ -252,7 +67,7 @@ class ResNetCNN(nn.Module):
             ResidualBlock(64, 64),
             ResidualBlock(64, 64))
 
-        self.layer2_block1   = ResidualBlock(64, 128, stride=2)
+        self.layer2_block1  = ResidualBlock(64, 128, stride=2)
         self.layer2_b2_conv1 = nn.Conv2d(128, 128, 3, padding=1, bias=False)
         self.layer2_b2_bn1   = nn.BatchNorm2d(128)
         self.layer2_b2_relu  = nn.ReLU(inplace=True)
@@ -279,7 +94,7 @@ class ResNetCNN(nn.Module):
         x = self.pool(x)
         return self.fc(x)
 
-# ─────────────────────────── 1-D Kalman Filter ───────────────────────────
+# ─────────────────────────── Kalman Filter ───────────────────────────
 class KalmanFilter1D:
     def __init__(self, Q: float = 0.01, R: float = 0.1):
         self.Q = Q
@@ -293,6 +108,10 @@ class KalmanFilter1D:
         self.x = self.x + K * (z - self.x)
         self.P = (1.0 - K) * self.P
         return float(self.x)
+
+    def reset(self, initial: float = 0.5):
+        self.x = initial
+        self.P = 1.0
 
 # ─────────────────────────── Grad-CAM ───────────────────────────
 def gradcam(model: nn.Module, image_tensor: torch.Tensor, target_layer: nn.Module, img_size: int) -> np.ndarray:
@@ -346,9 +165,9 @@ def overlay_cam(img_np: np.ndarray, cam: np.ndarray, alpha: float = 0.4) -> np.n
     heatmap_colored = cv2.cvtColor(heatmap_colored, cv2.COLOR_BGR2RGB)
     return np.clip((1 - alpha) * img_np + alpha * heatmap_colored, 0, 255).astype(np.uint8)
 
-# ─────────────────────────── Cache Loading ───────────────────────────
+# ─────────────────────────── Load Resources ───────────────────────────
 @st.cache_resource
-def load_assets():
+def load_all():
     with open(CONFIG_PATH) as f:
         cfg = json.load(f)
     img_size = cfg.get("img_size", 128)
@@ -376,334 +195,276 @@ def load_assets():
 
     return model, transform, threshold, img_size, metrics
 
-model, transform, default_threshold, IMG_SIZE, metrics = load_assets()
+model, transform, default_threshold, IMG_SIZE, metrics = load_all()
 
-# ─────────────────────────── Executive Hero Banner ───────────────────────────
-st.markdown("""
-<div class="hero-banner">
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h1 class="hero-title">🛣️ Road Pothole Detection & Localization System</h1>
-            <div class="hero-sub">Deep Learning Practical Project (B.Tech Sem V) • Autonomous Road Surface Inspection</div>
-            <div class="badge-container">
-                <span class="meta-badge">PyTorch 2.9 (From Scratch)</span>
-                <span class="meta-badge emerald">ResNet + BatchNorm</span>
-                <span class="meta-badge purple">Grad-CAM XAI</span>
-                <span class="meta-badge">1-D Kalman Filter</span>
-                <span class="meta-badge emerald">Test Acc: 91.51%</span>
-                <span class="meta-badge purple">ROC-AUC: 0.9669</span>
-            </div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+# ─────────────────────────── Header & Navigation ───────────────────────────
+st.title("🛣️ Pothole Detection System")
+st.caption("Deep Learning Practical Project (B.Tech Sem V) — From Scratch (PyTorch) with Grad-CAM & 1-D Kalman Filter")
 
-# ─────────────────────────── Navigation Tabs (Viva Removed) ───────────────────────────
 tabs = st.tabs([
-    "📷 Image Saliency Inspection",
-    "🎥 Road Video Stream & Kalman Tracking",
-    "📊 Empirical Benchmarks & Curves",
-    "🧠 Grad-CAM Explainability Diagnostics"
+    "📷 Image Detection",
+    "🎥 Video Detection (Kalman Filter)",
+    "📊 Model Evaluation & Curves",
+    "🧠 Grad-CAM Explainability",
+    "📖 Viva Cheat Sheet"
 ])
 
 # ══════════════════════════════════════════════════════════════════════════
-# TAB 1: Image Saliency Inspection
+# TAB 1: Image Detection
 # ══════════════════════════════════════════════════════════════════════════
 with tabs[0]:
-    col_main, col_sidebar = st.columns([2.2, 1.0])
+    st.subheader("Single Image Pothole Detection with Grad-CAM")
+    col_input, col_config = st.columns([2, 1])
 
-    with col_sidebar:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown("### ⚙️ Inspection Controls")
-        
+    with col_config:
+        st.markdown("### Settings")
         selected_threshold = st.slider(
-            "Decision Threshold (τ)",
+            "Decision Threshold (Validation F1-optimized)",
             min_value=0.10, max_value=0.90, value=default_threshold, step=0.01,
-            help="Optimal threshold determined on validation set via F1 maximization."
+            key="img_thresh"
         )
-        st.caption(f"🎯 Validation-optimal threshold: **`{default_threshold:.2f}`**")
-
-        input_mode = st.radio("Input Source Selection", ["Benchmark Dataset Samples", "Upload External Image"])
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.info(f"Optimal threshold chosen on validation set: **{default_threshold:.2f}**")
+        input_mode = st.radio("Choose Input Source:", ["Sample Images from Dataset", "Upload Custom Image"], key="img_mode")
 
     sample_image = None
-    with col_sidebar:
-        if input_mode == "Benchmark Dataset Samples":
-            pothole_samples = list(DATA_POTHOLES.glob("*.jpg"))[:12] if DATA_POTHOLES.exists() else []
-            normal_samples  = list(DATA_NORMAL.glob("*.jpg"))[:12] if DATA_NORMAL.exists() else []
-            
-            sample_dict = {f"🕳️ Pothole Sample: {p.name}": p for p in pothole_samples}
-            sample_dict.update({f"✅ Normal Road: {p.name}": p for p in normal_samples})
+    if input_mode == "Sample Images from Dataset":
+        pothole_samples = list(DATA_POTHOLES.glob("*.jpg"))[:8] if DATA_POTHOLES.exists() else []
+        normal_samples  = list(DATA_NORMAL.glob("*.jpg"))[:8] if DATA_NORMAL.exists() else []
+        
+        sample_dict = {f"Pothole: {p.name}": p for p in pothole_samples}
+        sample_dict.update({f"Normal Road: {p.name}": p for p in normal_samples})
 
-            selected_sample_name = st.selectbox("Select Test Image:", list(sample_dict.keys()))
-            if selected_sample_name:
-                sample_image = Image.open(sample_dict[selected_sample_name]).convert("RGB")
-        else:
-            uploaded_file = st.file_uploader("Upload Image File", type=["jpg", "jpeg", "png"])
-            if uploaded_file:
-                sample_image = Image.open(uploaded_file).convert("RGB")
+        selected_sample_name = st.selectbox("Select a test image from dataset:", list(sample_dict.keys()))
+        if selected_sample_name:
+            sample_image = Image.open(sample_dict[selected_sample_name]).convert("RGB")
+    else:
+        uploaded_file = st.file_uploader("Upload road image (JPG, PNG)", type=["jpg", "jpeg", "png"], key="img_uploader")
+        if uploaded_file:
+            sample_image = Image.open(uploaded_file).convert("RGB")
 
-    with col_main:
-        if sample_image:
-            tensor = transform(sample_image)
-            with torch.no_grad():
-                logit = model(tensor.unsqueeze(0))
-            prob = torch.sigmoid(logit).item()
-            cam = gradcam(model, tensor, model.last_conv, IMG_SIZE)
+    if sample_image:
+        tensor = transform(sample_image)
+        with torch.no_grad():
+            logit = model(tensor.unsqueeze(0))
+        prob = torch.sigmoid(logit).item()
+        cam = gradcam(model, tensor, model.last_conv, IMG_SIZE)
 
-            img_resized = np.array(sample_image.resize((IMG_SIZE, IMG_SIZE)))
-            overlay = overlay_cam(img_resized, cam)
-            x1, y1, x2, y2 = bbox_from_heatmap(cam, IMG_SIZE)
-            overlay_bbox = overlay.copy()
+        img_resized = np.array(sample_image.resize((IMG_SIZE, IMG_SIZE)))
+        overlay = overlay_cam(img_resized, cam)
+        x1, y1, x2, y2 = bbox_from_heatmap(cam, IMG_SIZE)
+        overlay_bbox = overlay.copy()
+        if prob >= selected_threshold:
+            cv2.rectangle(overlay_bbox, (x1, y1), (x2, y2), (255, 255, 0), 2)
+
+        st.markdown("---")
+        res_col1, res_col2 = st.columns([1, 2])
+        with res_col1:
             if prob >= selected_threshold:
-                cv2.rectangle(overlay_bbox, (x1, y1), (x2, y2), (255, 255, 0), 2)
-
-            # Decision Banner
-            is_detected = prob >= selected_threshold
-            if is_detected:
-                st.markdown(f"""
-                <div class="alert-pothole">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <span style="font-size:1.3rem; font-weight:800;">⚠️ POTHOLE CRATER DETECTED</span><br>
-                            <span style="font-size:0.9rem;">Weakly-supervised spatial bounding box derived from gradient saliency maps.</span>
-                        </div>
-                        <div style="text-align:right;">
-                            <span style="font-size:1.8rem; font-weight:800; font-family:'JetBrains Mono';">{prob:.1%}</span><br>
-                            <span style="font-size:0.75rem; text-transform:uppercase;">Model Confidence</span>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.error(f"### ⚠️ POTHOLE DETECTED\n**Confidence:** `{prob:.2%}` (Threshold: `{selected_threshold:.2f}`)")
             else:
-                st.markdown(f"""
-                <div class="alert-normal">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <span style="font-size:1.3rem; font-weight:800;">✅ NORMAL ROAD SURFACE</span><br>
-                            <span style="font-size:0.9rem;">Surface continuity confirmed within permissible texture variance.</span>
-                        </div>
-                        <div style="text-align:right;">
-                            <span style="font-size:1.8rem; font-weight:800; font-family:'JetBrains Mono';">{prob:.1%}</span><br>
-                            <span style="font-size:0.75rem; text-transform:uppercase;">Pothole Likelihood</span>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.success(f"### ✅ NORMAL ROAD\n**Confidence:** `{prob:.2%}` (Threshold: `{selected_threshold:.2f}`)")
+            st.progress(prob)
 
-            st.write("")
-            col_v1, col_v2, col_v3 = st.columns(3)
-            with col_v1:
-                st.markdown('<div class="img-box">', unsafe_allow_html=True)
-                st.image(img_resized, use_container_width=True)
-                st.markdown('<div class="img-caption">1. Raw Photographic Feed (128x128)</div></div>', unsafe_allow_html=True)
-            with col_v2:
-                st.markdown('<div class="img-box">', unsafe_allow_html=True)
-                st.image(cam, clamp=True, use_container_width=True)
-                st.markdown('<div class="img-caption">2. Grad-CAM Activation Energy</div></div>', unsafe_allow_html=True)
-            with col_v3:
-                st.markdown('<div class="img-box">', unsafe_allow_html=True)
-                st.image(overlay_bbox, use_container_width=True)
-                st.markdown('<div class="img-caption">3. Weakly-Supervised Bounding Contour</div></div>', unsafe_allow_html=True)
+        with res_col2:
+            st.markdown(
+                f"**Localisation Mode:** Weakly Supervised (Grad-CAM).\n"
+                f"- Heatmap highlights regions driving the model's decision.\n"
+                f"- Bounding box derived from 50th percentile contour activation."
+            )
+
+        col_img1, col_img2, col_img3 = st.columns(3)
+        with col_img1:
+            st.image(img_resized, caption="1. Input Road Image (128x128)", use_container_width=True)
+        with col_img2:
+            st.image(cam, caption="2. Grad-CAM Activation Heatmap", clamp=True, use_container_width=True)
+        with col_img3:
+            st.image(overlay_bbox, caption="3. Heatmap Overlay + Bounding Box", use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════
-# TAB 2: Video Stream & Kalman Tracking
+# TAB 2: Video Detection (Kalman Filter)
 # ══════════════════════════════════════════════════════════════════════════
 with tabs[1]:
-    col_v_main, col_v_ctrl = st.columns([2.2, 1.0])
+    st.subheader("Road Video Pothole Detection with 1-D Kalman Filter Smoothing")
+    st.markdown(
+        """
+        In video sequences, raw CNN frame-by-frame predictions can exhibit temporal flicker.
+        A **1-D Kalman Filter** maintains a hidden state of the true road condition,
+        damping high-frequency measurement noise ($R$) while adapting to road state changes ($Q$).
+        """
+    )
 
-    with col_v_ctrl:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown("### 🎛️ Video Tracking Controls")
-        video_thresh = st.slider("Detection Threshold", 0.10, 0.90, default_threshold, 0.01, key="v_thresh_tab")
-        use_kalman = st.checkbox("Enable 1-D Kalman Filter", value=True, help="Eliminates frame-to-frame probability flickering")
-        kalman_q = st.slider("Process Noise Q", 0.001, 0.1, 0.01, 0.005, format="%.3f")
-        kalman_r = st.slider("Sensor Noise R", 0.01, 0.5, 0.10, 0.02, format="%.2f")
+    v_col1, v_col2 = st.columns([2, 1])
+
+    with v_col2:
+        st.markdown("### Video & Filter Settings")
+        video_thresh = st.slider("Detection Threshold", 0.10, 0.90, default_threshold, 0.01, key="v_thresh")
+        use_kalman = st.checkbox("Enable 1-D Kalman Smoothing", value=True)
+        kalman_q = st.slider("Process Noise Q (state drift rate)", 0.001, 0.1, 0.01, 0.005, format="%.3f")
+        kalman_r = st.slider("Measurement Noise R (sensor noise)", 0.01, 0.5, 0.10, 0.02, format="%.2f")
         frame_stride = st.selectbox("Processing Stride", [1, 2, 3, 5], index=1, help="Stride 2 processes every 2nd frame for 2x faster performance")
-        max_frames = st.number_input("Max Frame Budget", min_value=30, max_value=2000, value=120, step=30)
-        
-        video_source_mode = st.radio("Video Source", ["Preloaded Video Sample", "Upload Video File"], key="v_mode")
-        
-        chosen_video_path = None
-        if video_source_mode == "Preloaded Video Sample":
-            v_options = {}
-            if (CURRENT_DIR / "sample_test_short.mp4").exists():
-                v_options["⚡ Quick Test Clip (120 frames, 4.8s)"] = CURRENT_DIR / "sample_test_short.mp4"
-            if (CURRENT_DIR / "sample_road_video.mp4").exists():
-                v_options["📹 Full Dashcam Video (692 frames, 27.7s)"] = CURRENT_DIR / "sample_road_video.mp4"
-            elif SAMPLE_VIDEO.exists():
-                v_options["📹 Full Dashcam Video (692 frames, 27.7s)"] = SAMPLE_VIDEO
-            
-            if v_options:
-                selected_v_key = st.selectbox("Select Sample Video:", list(v_options.keys()))
-                chosen_video_path = str(v_options[selected_v_key])
+        max_frames_to_process = st.number_input("Max frames to process (0 = all frames)", min_value=0, max_value=2000, value=120, step=30)
+
+        video_source_mode = st.radio("Choose Video Source:", ["Sample Road Video", "Upload Video File"], key="v_source")
+
+    video_path_to_use = None
+    if video_source_mode == "Sample Road Video":
+        if SAMPLE_VIDEO.exists():
+            video_path_to_use = str(SAMPLE_VIDEO)
+            st.info(f"Using sample video: `{SAMPLE_VIDEO.name}` ({SAMPLE_VIDEO.stat().st_size / (1024*1024):.1f} MB)")
         else:
-            up_v = st.file_uploader("Upload Video File (MP4, MOV)", type=["mp4", "mov", "avi"])
-            if up_v:
-                tf = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                tf.write(up_v.read())
-                chosen_video_path = tf.name
+            st.warning("Sample video not found on disk. Please upload a video.")
+    else:
+        uploaded_video = st.file_uploader("Upload MP4/AVI/MOV video", type=["mp4", "avi", "mov", "mkv"], key="v_uploader")
+        if uploaded_video:
+            tfile = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+            tfile.write(uploaded_video.read())
+            video_path_to_use = tfile.name
+            st.success("Video uploaded successfully!")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+    if video_path_to_use:
+        st.video(video_path_to_use)
 
-    with col_v_main:
-        if chosen_video_path:
-            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-            st.markdown(f"**Loaded Footage:** `{Path(chosen_video_path).name}`")
-            st.video(chosen_video_path)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            if st.button("🚀 Execute Autonomous Video Screening", type="primary"):
-                cap = cv2.VideoCapture(chosen_video_path)
-                if not cap.isOpened():
-                    st.error("Error opening video stream.")
+        if st.button("🚀 Run Video Pothole Detection", type="primary"):
+            cap = cv2.VideoCapture(video_path_to_use)
+            if not cap.isOpened():
+                st.error("Cannot open video file.")
+            else:
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+                if max_frames_to_process > 0:
+                    frames_limit = min(total_frames, int(max_frames_to_process))
                 else:
-                    total_f = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
-                    limit = min(total_f, int(max_frames)) if max_frames > 0 else total_f
+                    frames_limit = total_frames
 
-                    kf = KalmanFilter1D(Q=kalman_q, R=kalman_r)
-                    prog_bar = st.progress(0.0)
-                    prog_txt = st.empty()
+                kf = KalmanFilter1D(Q=kalman_q, R=kalman_r)
+                
+                progress_bar = st.progress(0.0)
+                status_text = st.empty()
 
-                    v_disp_col1, v_disp_col2 = st.columns([1.5, 1.0])
-                    with v_disp_col1:
-                        frame_live_view = st.empty()
-                    with v_disp_col2:
-                        telemetry_box = st.empty()
-                        live_chart_box = st.empty()
+                disp_col1, disp_col2 = st.columns([3, 2])
+                with disp_col1:
+                    live_image_placeholder = st.empty()
+                with disp_col2:
+                    telemetry_placeholder = st.empty()
+                    chart_placeholder = st.empty()
 
-                    raw_list, smooth_list, frame_ids = [], [], []
-                    pothole_count = 0
-                    f_idx = 0
-                    proc_idx = 0
+                raw_probs, smooth_probs, frame_indices = [], [], []
+                pothole_frames_detected = 0
+                frame_count = 0
+                processed_count = 0
 
-                    output_v_path = CURRENT_DIR / "annotated_video_demo.mp4"
-                    writer = cv2.VideoWriter(str(output_v_path), cv2.VideoWriter_fourcc(*"mp4v"), fps / frame_stride, (IMG_SIZE, IMG_SIZE))
-                    t_start = time.time()
+                # Prepare output writer
+                output_video_path = CURRENT_DIR / "annotated_video_demo.mp4"
+                fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                out_writer = cv2.VideoWriter(str(output_video_path), fourcc, fps / frame_stride, (IMG_SIZE, IMG_SIZE))
 
-                    while cap.isOpened() and f_idx < limit:
-                        ret, bgr = cap.read()
-                        if not ret: break
+                start_time = time.time()
 
-                        if f_idx % frame_stride == 0:
-                            proc_idx += 1
-                            pil = Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
-                            ten = transform(pil)
-                            with torch.no_grad():
-                                lg = model(ten.unsqueeze(0))
-                            r_prob = torch.sigmoid(lg).item()
-                            s_prob = kf.update(r_prob) if use_kalman else r_prob
-                            dec_prob = s_prob
+                while cap.isOpened() and frame_count < frames_limit:
+                    ret, frame_bgr = cap.read()
+                    if not ret:
+                        break
 
-                            cm = gradcam(model, ten, model.last_conv, IMG_SIZE)
-                            ov = overlay_cam(np.array(pil.resize((IMG_SIZE, IMG_SIZE))), cm)
+                    if frame_count % frame_stride == 0:
+                        processed_count += 1
+                        pil_img = Image.fromarray(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+                        tensor = transform(pil_img)
+                        with torch.no_grad():
+                            logit = model(tensor.unsqueeze(0))
+                        raw_prob = torch.sigmoid(logit).item()
 
-                            is_pot = dec_prob >= video_thresh
-                            if is_pot:
-                                pothole_count += 1
-                                bx1, by1, bx2, by2 = bbox_from_heatmap(cm, IMG_SIZE)
-                                cv2.rectangle(ov, (bx1, by1), (bx2, by2), (255, 255, 0), 2)
-                                tag = f"POTHOLE {dec_prob:.2f}"
-                                clr = (255, 50, 50)
-                            else:
-                                tag = f"NORMAL {dec_prob:.2f}"
-                                clr = (50, 255, 50)
+                        if use_kalman:
+                            smoothed_prob = kf.update(raw_prob)
+                        else:
+                            smoothed_prob = raw_prob
 
-                            cv2.putText(ov, tag, (5, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.45, clr, 1, cv2.LINE_AA)
-                            writer.write(cv2.cvtColor(ov, cv2.COLOR_RGB2BGR))
+                        decisive_prob = smoothed_prob
 
-                            raw_list.append(r_prob)
-                            smooth_list.append(s_prob)
-                            frame_ids.append(f_idx)
+                        cam = gradcam(model, tensor, model.last_conv, IMG_SIZE)
+                        img_resized = np.array(pil_img.resize((IMG_SIZE, IMG_SIZE)))
+                        overlay = overlay_cam(img_resized, cam)
 
-                            if proc_idx % 3 == 0 or f_idx == limit - 1:
-                                frame_live_view.image(ov, caption=f"Frame {f_idx}/{limit} • {tag}", use_container_width=True)
-                                telemetry_box.markdown(f"""
-                                <div class="glass-card" style="padding:0.8rem;">
-                                    <b>Analyzed:</b> <code>{f_idx}/{limit}</code> frames<br>
-                                    <b>Pothole Detections:</b> <code>{pothole_count}</code> ({100*pothole_count/max(proc_idx,1):.1f}%)<br>
-                                    <b>Raw CNN Prob:</b> <code>{r_prob:.3f}</code><br>
-                                    <b>Kalman Smoothed:</b> <code>{s_prob:.3f}</code>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                live_chart_box.line_chart(pd.DataFrame({
-                                    "Raw": raw_list[-25:],
-                                    "Kalman": smooth_list[-25:]
-                                }), height=150)
+                        is_pothole = decisive_prob >= video_thresh
+                        if is_pothole:
+                            pothole_frames_detected += 1
+                            x1, y1, x2, y2 = bbox_from_heatmap(cam, IMG_SIZE)
+                            cv2.rectangle(overlay, (x1, y1), (x2, y2), (255, 255, 0), 2)
+                            status_label = f"POTHOLE p={decisive_prob:.2f}"
+                            label_color = (255, 50, 50)
+                        else:
+                            status_label = f"NORMAL p={decisive_prob:.2f}"
+                            label_color = (50, 255, 50)
 
-                        f_idx += 1
-                        prog_bar.progress(min(f_idx / limit, 1.0))
-                        prog_txt.caption(f"Analyzing road surface in frame {f_idx} of {limit}...")
+                        cv2.putText(overlay, status_label, (5, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.45, label_color, 1, cv2.LINE_AA)
 
-                    cap.release()
-                    writer.release()
-                    dur = time.time() - t_start
+                        # Write to video
+                        overlay_bgr = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)
+                        out_writer.write(overlay_bgr)
 
-                    st.success(f"✅ Video processing complete in {dur:.1f}s ({proc_idx/max(dur,0.1):.1f} FPS).")
-                    
-                    st.markdown("### 📈 Kalman Filter Temporal Smoothing Analysis")
-                    st.caption("Visualizing the dampening of high-frequency spurious noise across road video frames.")
-                    plot_df = pd.DataFrame({
-                        "Frame Index": frame_ids,
-                        "Raw CNN Likelihood": raw_list,
-                        "Kalman Smoothed Likelihood": smooth_list,
-                        "Decision Threshold": [video_thresh] * len(frame_ids)
-                    }).set_index("Frame Index")
-                    st.line_chart(plot_df)
+                        raw_probs.append(raw_prob)
+                        smooth_probs.append(smoothed_prob)
+                        frame_indices.append(frame_count)
 
-                    if output_v_path.exists():
-                        with open(output_v_path, "rb") as vf:
-                            st.download_button(
-                                label="⬇️ Download Annotated Video File",
-                                data=vf.read(),
-                                file_name="pothole_annotated_feed.mp4",
-                                mime="video/mp4"
+                        # Live preview update every few frames
+                        if processed_count % 3 == 0 or frame_count == frames_limit - 1:
+                            live_image_placeholder.image(overlay, caption=f"Frame {frame_count}/{frames_limit} — {status_label}", use_container_width=True)
+                            telemetry_placeholder.markdown(
+                                f"**Processed:** `{frame_count}/{frames_limit}` frames  \n"
+                                f"**Pothole Frames:** `{pothole_frames_detected}` (`{100*pothole_frames_detected/max(processed_count,1):.1f}%`)  \n"
+                                f"**Raw Prob:** `{raw_prob:.3f}` | **Smoothed:** `{smoothed_prob:.3f}`"
                             )
+                            df_chart = pd.DataFrame({
+                                "Raw CNN": raw_probs[-30:],
+                                "Kalman Smoothed": smooth_probs[-30:]
+                            })
+                            chart_placeholder.line_chart(df_chart, height=160)
+
+                    frame_count += 1
+                    progress_bar.progress(min(frame_count / frames_limit, 1.0))
+                    status_text.text(f"Analyzing frame {frame_count} / {frames_limit}...")
+
+                cap.release()
+                out_writer.release()
+                total_time = time.time() - start_time
+
+                st.success(f"🎉 Video analysis complete! Processed {processed_count} frames in {total_time:.1f}s ({processed_count/max(total_time,0.1):.1f} FPS).")
+
+                # Full Probability Curves across the entire video
+                st.markdown("### 📈 Temporal Probability Trajectory (Kalman Filter vs Raw CNN)")
+                st.caption("Notice how the 1-D Kalman Filter removes spurious high-frequency spikes and stabilizes decision thresholds.")
+                full_df = pd.DataFrame({
+                    "Frame": frame_indices,
+                    "Raw CNN Probability": raw_probs,
+                    "Kalman Smoothed Probability": smooth_probs,
+                    "Decision Threshold": [video_thresh] * len(frame_indices)
+                }).set_index("Frame")
+                st.line_chart(full_df)
+
+                # Download button for annotated video
+                if output_video_path.exists():
+                    with open(output_video_path, "rb") as vf:
+                        st.download_button(
+                            label="⬇️ Download Annotated Video (MP4)",
+                            data=vf.read(),
+                            file_name="pothole_annotated_video.mp4",
+                            mime="video/mp4"
+                        )
 
 # ══════════════════════════════════════════════════════════════════════════
-# TAB 3: Empirical Benchmarks & Curves
+# TAB 3: Model Evaluation & Curves
 # ══════════════════════════════════════════════════════════════════════════
 with tabs[2]:
-    st.markdown("### 🏆 Comprehensive Evaluation (Held-Out Test Partition, N = 106)")
-    
-    # KPI Row
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-val">{metrics['model_b_test']['accuracy']:.1%}</div>
-            <div class="kpi-label">Classification Accuracy</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with kpi2:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-val">{metrics['model_b_test']['precision']:.1%}</div>
-            <div class="kpi-label">Precision Rate</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with kpi3:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-val">{metrics['model_b_test']['recall']:.1%}</div>
-            <div class="kpi-label">Pothole Recall</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with kpi4:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-val">{metrics['model_b_test']['roc_auc']:.4f}</div>
-            <div class="kpi-label">Area Under ROC (AUC)</div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.subheader("📊 Empirical Test Set Results (N = 106 Unseen Images)")
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    m_col1.metric("Test Accuracy (Model B)", f"{metrics['model_b_test']['accuracy']:.2%}")
+    m_col2.metric("Precision", f"{metrics['model_b_test']['precision']:.2%}")
+    m_col3.metric("Recall", f"{metrics['model_b_test']['recall']:.2%}")
+    m_col4.metric("ROC-AUC", f"{metrics['model_b_test']['roc_auc']:.4f}")
 
-    st.write("")
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown("#### 📐 Architecture Comparison: Vanilla CNN vs. ResNet (BatchNorm)")
+    st.markdown("### Comparison Table")
     st.table({
-        "Model Architecture": ["Majority-Class Baseline", "Model A: Vanilla CNN", "Model B: ResNet CNN + BatchNorm"],
-        "Parameter Budget": ["0", f"{metrics['model_params']['model_a']:,}", f"{metrics['model_params']['model_b']:,}"],
+        "Model": ["Majority-Class Baseline", "Model A: Vanilla CNN", "Model B: ResNet CNN (BatchNorm)"],
+        "Parameters": ["—", f"{metrics['model_params']['model_a']:,}", f"{metrics['model_params']['model_b']:,}"],
         "Accuracy": [f"{metrics['majority_baseline_acc']:.2%}", f"{metrics['model_a_test']['accuracy']:.2%}", f"{metrics['model_b_test']['accuracy']:.2%}"],
         "Precision": ["—", f"{metrics['model_a_test']['precision']:.2%}", f"{metrics['model_b_test']['precision']:.2%}"],
         "Recall": ["100.0%", f"{metrics['model_a_test']['recall']:.2%}", f"{metrics['model_b_test']['recall']:.2%}"],
@@ -711,51 +472,50 @@ with tabs[2]:
         "ROC-AUC": ["0.5000", f"{metrics['model_a_test']['roc_auc']:.4f}", f"{metrics['model_b_test']['roc_auc']:.4f}"],
         "F1 95% Bootstrap CI": ["—", f"[{metrics['model_a_test']['f1_ci_lo']:.4f}, {metrics['model_a_test']['f1_ci_hi']:.4f}]", f"[{metrics['model_b_test']['f1_ci_lo']:.4f}, {metrics['model_b_test']['f1_ci_hi']:.4f}]"]
     })
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("#### 📊 Empirical Training & Discriminative Curves")
-    grid_c1, grid_c2 = st.columns(2)
-    with grid_c1:
+    st.markdown("### Training & Evaluation Plots")
+    p_col1, p_col2 = st.columns(2)
+    with p_col1:
         if (CURRENT_DIR / "training_curves.png").exists():
-            st.image(str(CURRENT_DIR / "training_curves.png"), caption="Training & Validation Trajectory (Loss & Accuracy)", use_container_width=True)
+            st.image(str(CURRENT_DIR / "training_curves.png"), caption="Loss & Accuracy Curves (Train vs Validation)")
         if (CURRENT_DIR / "roc_curves.png").exists():
-            st.image(str(CURRENT_DIR / "roc_curves.png"), caption="Receiver Operating Characteristic (ROC)", use_container_width=True)
-    with grid_c2:
+            st.image(str(CURRENT_DIR / "roc_curves.png"), caption="ROC Curves (Model A vs Model B)")
+    with p_col2:
         if (CURRENT_DIR / "confusion_matrices.png").exists():
-            st.image(str(CURRENT_DIR / "confusion_matrices.png"), caption="Confusion Matrix Distributions", use_container_width=True)
+            st.image(str(CURRENT_DIR / "confusion_matrices.png"), caption="Test Confusion Matrices")
         if (CURRENT_DIR / "pr_curves.png").exists():
-            st.image(str(CURRENT_DIR / "pr_curves.png"), caption="Precision-Recall Curves", use_container_width=True)
+            st.image(str(CURRENT_DIR / "pr_curves.png"), caption="Precision-Recall Curves")
 
 # ══════════════════════════════════════════════════════════════════════════
-# TAB 4: Explainable AI (Grad-CAM)
+# TAB 4: Explainable AI & Error Analysis
 # ══════════════════════════════════════════════════════════════════════════
 with tabs[3]:
-    st.markdown("### 🧠 Explainable AI: Activation Saliency & Failure Analysis")
+    st.subheader("🧠 Grad-CAM Explainability & Failure Analysis")
     st.markdown(
         """
-        **Grad-CAM** interrogates the final convolutional layer (`self.last_conv`) by calculating the gradients
-        of the target class output with respect to spatial feature activations. This provides transparent attribution
-        of features driving positive and negative classifications without bounding box supervision.
+        Grad-CAM computes the gradients of the output score with respect to the feature maps of `last_conv`,
+        providing spatial localization without bounding box training.
         """
     )
-    
     if (CURRENT_DIR / "gradcam_tp.png").exists():
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown("#### ✅ True Positive Detections (Accurate Pothole Saliency)")
-        st.image(str(CURRENT_DIR / "gradcam_tp.png"), caption="True Positives: Model concentrates spatial energy strictly on crater edges & depth cues", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("#### True Positives (Correctly Detected Potholes)")
+        st.image(str(CURRENT_DIR / "gradcam_tp.png"), caption="True Positives with Grad-CAM localization")
 
-    err1, err2 = st.columns(2)
-    with err1:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown("#### ⚠️ False Positives (Look-Alikes & Road Markings)")
+    err_col1, err_col2 = st.columns(2)
+    with err_col1:
         if (CURRENT_DIR / "gradcam_fp.png").exists():
-            st.image(str(CURRENT_DIR / "gradcam_fp.png"), caption="False Positives: High contrast tree shadows or asphalt seam cracks mimic pothole edges", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with err2:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown("#### 🔍 False Negatives (Shallow / Blended Depressions)")
+            st.markdown("#### False Positives (Normal Road Flagged as Pothole)")
+            st.image(str(CURRENT_DIR / "gradcam_fp.png"), caption="False Positives: triggered by sharp road shadows or surface markings")
+    with err_col2:
         if (CURRENT_DIR / "gradcam_fn.png").exists():
-            st.image(str(CURRENT_DIR / "gradcam_fn.png"), caption="False Negatives: Eroded, low-depth potholes without sharp perimeter contrast", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("#### False Negatives (Potholes Missed)")
+            st.image(str(CURRENT_DIR / "gradcam_fn.png"), caption="False Negatives: smooth/shallow potholes with low edge contrast")
+
+# ══════════════════════════════════════════════════════════════════════════
+# TAB 5: Viva Cheat Sheet
+# ══════════════════════════════════════════════════════════════════════════
+with tabs[4]:
+    st.subheader("📖 Viva Cheat Sheet & Questions")
+    if (CURRENT_DIR / "viva_cheatsheet.md").exists():
+        with open(CURRENT_DIR / "viva_cheatsheet.md", encoding="utf-8") as vf:
+            st.markdown(vf.read())
